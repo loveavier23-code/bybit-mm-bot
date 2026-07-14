@@ -707,14 +707,15 @@ export default function Home() {
                         <TableHead className="text-right">Entry</TableHead>
                         <TableHead className="text-right">Exit</TableHead>
                         <TableHead className="text-right">Qty</TableHead>
-                        <TableHead className="text-right">PnL</TableHead>
-                        <TableHead className="text-right">Note</TableHead>
+                        <TableHead className="text-right">Fees</TableHead>
+                        <TableHead className="text-right">Net PnL</TableHead>
+                        <TableHead>Note</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {trades.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center text-muted-foreground py-6 text-sm">
+                          <TableCell colSpan={9} className="text-center text-muted-foreground py-6 text-sm">
                             No trades yet this session. Start the bot to begin trading.
                           </TableCell>
                         </TableRow>
@@ -725,6 +726,7 @@ export default function Home() {
                             : (t.side === "Buy"
                                 ? (t.exit - t.entry) * t.qty
                                 : (t.entry - t.exit) * t.qty)
+                          const fees = typeof t.fees === "number" ? t.fees : 0
                           return (
                             <TableRow key={i}>
                               <TableCell className="text-muted-foreground text-xs">
@@ -737,6 +739,9 @@ export default function Home() {
                               <TableCell className="text-right font-mono">{t.entry}</TableCell>
                               <TableCell className="text-right font-mono">{t.exit}</TableCell>
                               <TableCell className="text-right font-mono">{t.qty}</TableCell>
+                              <TableCell className="text-right font-mono text-muted-foreground text-xs">
+                                {fees > 0 ? `-$${fees.toFixed(4)}` : fees < 0 ? `+$${Math.abs(fees).toFixed(4)}` : "—"}
+                              </TableCell>
                               <TableCell className={`text-right font-mono ${pnl >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
                                 {pnl >= 0 ? "+" : ""}${pnl.toFixed(4)}
                               </TableCell>

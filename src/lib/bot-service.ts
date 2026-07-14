@@ -232,6 +232,64 @@ export async function getOpenOrders(): Promise<any[]> {
   return list;
 }
 
+/**
+ * Fetch actual execution data (fill prices + fees) from Bybit for a given symbol.
+ * Used to compute accurate realized PnL instead of using the intended hedge price.
+ *
+ * Returns the average fill price, total fees (signed: +cost / -rebate), and total qty
+ * for closing-side executions that occurred after the leg opened.
+ */
+async function getActualCloseData(symbol: string, leg: { side: string; entry: number; qty: number; open_ts: number }): Promise<{ fill_price: number; fees: number; qty: number } | null> {
+  try {
+    const close_side = leg.side === "Buy" ? "Sell" : "Buy";
+    const r: any = await bybitGet("/v5/execution/list", {
+      category: CATEGORY, symbol, limit: "50",
+    });
+    const execs = r?.result?.list;
+    if (!Array.isArray(execs)) return null;
+
+    // Filter: closing side, after leg opened
+    const cutoff = leg.open_ts;
+    const matching: any[] = [];
+    for (const exec of execs) {
+      const exec_ts = parseInt(exec.execTime) / 1000;
+      if (exec_ts < cutoff) continue;
+      if (exec.side !== close_side) continue;
+      matching.push(exec);
+    }
+    if (matching.length === 0) return null;
+
+    // Sort ascending by time so we sum fills in order
+    matching.sort((a, b) => parseInt(a.execTime) - parseInt(b.execTime));
+
+    // Sum until we've covered the leg's qty
+    let total_value = 0;
+    let total_qty = 0;
+    let total_fees = 0;
+    for (const exec of matching) {
+      if (total_qty >= leg.qty - 1e-9) break;
+      const exec_qty = parseFloat(exec.execQty || "0");
+      const exec_px = parseFloat(exec.execPrice || "0");
+      const exec_fee = parseFloat(exec.execFee || "0");
+      total_value += exec_qty * exec_px;
+      total_qty += exec_qty;
+      total_fees += exec_fee;
+    }
+
+    if (total_qty < leg.qty * 0.5) {
+      // Didn't find enough executions — can't compute accurately
+      return null;
+    }
+
+    const avg_fill = total_qty > 0 ? total_value / total_qty : 0;
+    // total_fees is signed: positive = cost paid, negative = maker rebate received
+    return { fill_price: avg_fill, fees: total_fees, qty: total_qty };
+  } catch (e: any) {
+    botLog("DEBUG", `getActualCloseData failed for ${symbol}: ${e.message}`);
+    return null;
+  }
+}
+
 async function setLeverage(symbol: string, lev: number): Promise<void> {
   try {
     await bybitPost("/v5/position/set-leverage", {
@@ -811,20 +869,49 @@ async function workerTick(): Promise<void> {
     const current_legs = new Set(open_legs.keys());
     for (const [sym, leg] of last_legs_snapshot) {
       if (!current_legs.has(sym)) {
-        // Compute realized PnL for this cycle:
-        // If we were LONG (Buy leg filled first), PnL = (exit - entry) * qty
-        // If we were SHORT (Sell leg filled first), PnL = (entry - exit) * qty
-        const cycle_pnl = leg.side === "Buy"
-          ? (leg.hedge - leg.entry) * leg.qty
-          : (leg.entry - leg.hedge) * leg.qty;
+        // Fetch ACTUAL fill price and fees from Bybit execution history.
+        // This is accurate — the old method used the intended hedge limit price
+        // (which may differ from actual fill, especially after SL market-close)
+        // and ignored fees entirely (inflating PnL by ~4 bps round-trip).
+        const actual = await getActualCloseData(sym, {
+          side: leg.side, entry: leg.entry, qty: leg.qty, open_ts: leg.open_ts,
+        });
+
+        let cycle_pnl: number;
+        let actual_exit: number;
+        let fees: number;
+        let note: string;
+
+        if (actual) {
+          // Net PnL = gross PnL - fees (fees are signed: +cost, -rebate)
+          const gross_pnl = leg.side === "Buy"
+            ? (actual.fill_price - leg.entry) * leg.qty
+            : (leg.entry - actual.fill_price) * leg.qty;
+          cycle_pnl = gross_pnl - actual.fees;
+          actual_exit = actual.fill_price;
+          fees = actual.fees;
+          note = "closed";
+          botLog("INFO", `[CLOSE-ACTUAL] ${sym} fill=${actual.fill_price} fees=${fees.toFixed(4)} gross=${gross_pnl.toFixed(4)} net=${cycle_pnl.toFixed(4)}`);
+        } else {
+          // Fallback: estimate using intended hedge price (less accurate, no fees)
+          cycle_pnl = leg.side === "Buy"
+            ? (leg.hedge - leg.entry) * leg.qty
+            : (leg.entry - leg.hedge) * leg.qty;
+          actual_exit = leg.hedge;
+          fees = 0;
+          note = "estimated";
+          botLog("WARNING", `[CLOSE-EST] ${sym} execution data unavailable — using estimated PnL (no fees)`);
+        }
+
         trade_history.push({
           ts: now, symbol: sym,
-          side: leg.side, entry: leg.entry, exit: leg.hedge,
-          qty: leg.qty, pnl: cycle_pnl, note: "closed",
+          side: leg.side, entry: leg.entry, exit: actual_exit,
+          qty: leg.qty, pnl: cycle_pnl, fees, note,
         });
         // Update session stats
         session_stats.total_cycles += 1;
         session_stats.total_realized_pnl += cycle_pnl;
+        session_stats.total_fees_paid += fees;
         if (cycle_pnl > 0) session_stats.winning_cycles += 1;
         else if (cycle_pnl < 0) session_stats.losing_cycles += 1;
         if (trade_history.length > 200) trade_history.shift();
@@ -833,7 +920,8 @@ async function workerTick(): Promise<void> {
     last_legs_snapshot = new Map();
     for (const [sym, leg] of open_legs) {
       last_legs_snapshot.set(sym, {
-        side: leg.side, entry: leg.entry_price, hedge: leg.hedge_price, qty: leg.qty,
+        side: leg.side, entry: leg.entry_price, hedge: leg.hedge_price,
+        qty: leg.qty, open_ts: leg.open_ts,
       });
     }
   } catch (e: any) {

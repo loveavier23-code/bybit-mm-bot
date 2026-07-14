@@ -151,5 +151,6 @@ export interface Trade {
   exit: number;
   qty: number;
   pnl?: number;
+  fees?: number;
   note: string;
 }
