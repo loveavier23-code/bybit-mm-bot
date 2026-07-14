@@ -121,6 +121,12 @@ export interface BotConfig {
   max_drawdown_pct: number;
   symbol_universe_size: number;
   auto_min_notional: boolean;
+  min_notional_usdt: number;
+  // Smart SL params
+  hedge_timeout_sec: number;
+  max_adverse_bps: number;
+  reprice_hedge: boolean;
+  verify_spread_at_fill: boolean;
 }
 
 export interface LogEntry {

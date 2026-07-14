@@ -878,6 +878,22 @@ export default function Home() {
                         step={5}
                         onChange={(v) => setConfigDraft({ ...configDraft, symbol_universe_size: Math.round(v) })}
                       />
+                      <ConfigNumber
+                        label="Hedge timeout (s)"
+                        value={configDraft.hedge_timeout_sec}
+                        step={5}
+                        suffix="s"
+                        onChange={(v) => setConfigDraft({ ...configDraft, hedge_timeout_sec: Math.round(v) })}
+                        help="Market-close if hedge doesn't fill in N sec"
+                      />
+                      <ConfigNumber
+                        label="Max adverse (bps)"
+                        value={configDraft.max_adverse_bps}
+                        step={1}
+                        suffix=" bps"
+                        onChange={(v) => setConfigDraft({ ...configDraft, max_adverse_bps: v })}
+                        help="Market-close if unrealised loss exceeds N bps"
+                      />
                     </div>
 
                     <div className="flex items-center justify-between p-3 border rounded-lg">
@@ -891,6 +907,32 @@ export default function Home() {
                       <Switch
                         checked={configDraft.auto_min_notional}
                         onCheckedChange={(c) => setConfigDraft({ ...configDraft, auto_min_notional: c })}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <Label className="font-medium">Re-price hedge to current market</Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          When a leg fills, price the hedge at the current best opposite quote instead of the stale original price. Dramatically improves fill rate and captured spread.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={configDraft.reprice_hedge}
+                        onCheckedChange={(c) => setConfigDraft({ ...configDraft, reprice_hedge: c })}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <Label className="font-medium">Verify spread at fill time</Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          When a leg fills, re-check the current spread. If it has collapsed below min_spread_bps, market-close immediately instead of placing a passive hedge that may never fill.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={configDraft.verify_spread_at_fill}
+                        onCheckedChange={(c) => setConfigDraft({ ...configDraft, verify_spread_at_fill: c })}
                       />
                     </div>
 
