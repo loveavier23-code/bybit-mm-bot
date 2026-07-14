@@ -652,3 +652,17 @@ Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linea
 13:34:09 | INFO    | [CLEANUP] Cancelling all open orders...
 13:34:09 | INFO    |   cancel_all_orders OK
 13:34:09 | INFO    | [CLEANUP] done.
+13:47:27 | INFO    | Starting Bybit MM Bot FastAPI bridge on port 8000
+13:47:47 | INFO    | Starting Bybit MM Bot FastAPI bridge on port 8000
+13:47:49 | INFO    | Refreshing instrument metadata...
+13:47:49 | INFO    |   loaded 429 eligible instruments (BTC/ETH excluded)
+13:51:01 | INFO    | Starting Bybit MM Bot FastAPI bridge on port 8000
+13:51:29 | INFO    | Starting Bybit MM Bot FastAPI bridge on port 8000
+13:51:53 | INFO    | Starting Bybit MM Bot FastAPI bridge on port 8000
+13:52:19 | INFO    | Starting Bybit MM Bot FastAPI bridge on port 8000
+13:52:44 | INFO    | Starting Bybit MM Bot FastAPI bridge on port 8000
+13:53:46 | INFO    | Refreshing instrument metadata...
+13:53:47 | INFO    |   loaded 429 eligible instruments (BTC/ETH excluded)
+13:53:59 | INFO    | Starting Bybit MM Bot FastAPI bridge on port 8000
+13:54:03 | INFO    | Refreshing instrument metadata...
+13:54:03 | INFO    |   loaded 429 eligible instruments (BTC/ETH excluded)

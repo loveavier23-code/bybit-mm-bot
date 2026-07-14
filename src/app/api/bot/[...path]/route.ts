@@ -1,0 +1,101 @@
+import { NextRequest, NextResponse } from "next/server";
+import * as bot from "@/lib/bot-service";
+
+/**
+ * Bot API routes — all in-process, no separate bridge service needed.
+ *
+ * Endpoints (under /api/bot/<path>):
+ *   GET  /health
+ *   GET  /state
+ *   POST /start
+ *   POST /stop
+ *   POST /cleanup
+ *   GET  /config
+ *   POST /config        (body: partial config)
+ *   GET  /logs?n=200
+ *   GET  /trades
+ *   GET  /equity-history
+ */
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ path: string[] }> }
+) {
+  const { path } = await params;
+  const route = path.join("/");
+  const url = new URL(req.url);
+
+  try {
+    switch (route) {
+      case "health": {
+        return NextResponse.json({
+          status: "ok",
+          bot_running: false, // updated below if needed
+          last_error: null,
+        });
+      }
+      case "state": {
+        const s = await bot.getSnapshot();
+        return NextResponse.json(s);
+      }
+      case "config": {
+        return NextResponse.json(bot.getConfig());
+      }
+      case "logs": {
+        const n = parseInt(url.searchParams.get("n") || "200");
+        return NextResponse.json({ logs: bot.getLogs(n), count: bot.getLogs(n).length });
+      }
+      case "trades": {
+        return NextResponse.json({ trades: bot.getTrades() });
+      }
+      case "equity-history": {
+        return NextResponse.json({ points: bot.getEquityHistory() });
+      }
+      default:
+        return NextResponse.json({ error: `not found: GET ${route}` }, { status: 404 });
+    }
+  } catch (e: any) {
+    console.error(`[bot GET /${route}] error:`, e);
+    return NextResponse.json({ error: e.message, type: e.name }, { status: 500 });
+  }
+}
+
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ path: string[] }> }
+) {
+  const { path } = await params;
+  const route = path.join("/");
+
+  try {
+    let body: any = null;
+    try { body = await req.json(); } catch { /* no body */ }
+
+    switch (route) {
+      case "start": {
+        const r = await bot.startBot();
+        return NextResponse.json(r);
+      }
+      case "stop": {
+        const r = await bot.stopBot();
+        return NextResponse.json(r);
+      }
+      case "cleanup": {
+        const r = await bot.cleanupBot();
+        return NextResponse.json(r);
+      }
+      case "config": {
+        const r = bot.updateConfig(body || {});
+        return NextResponse.json(r);
+      }
+      default:
+        return NextResponse.json({ error: `not found: POST ${route}` }, { status: 404 });
+    }
+  } catch (e: any) {
+    console.error(`[bot POST /${route}] error:`, e);
+    return NextResponse.json({ error: e.message, type: e.name }, { status: 500 });
+  }
+}
