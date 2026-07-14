@@ -61,6 +61,8 @@ export interface SessionStats {
   session_start_ts: number;
   session_duration_sec: number;
   win_rate: number;
+  gross_pnl?: number;
+  avg_pnl_per_cycle?: number;
 }
 
 export interface Position {
@@ -151,6 +153,7 @@ export interface Trade {
   exit: number;
   qty: number;
   pnl?: number;
+  gross_pnl?: number;
   fees?: number;
   note: string;
 }

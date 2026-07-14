@@ -284,7 +284,7 @@ export default function Home() {
         )}
 
         {/* Stat cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
           <StatCard
             label="Equity"
             value={`$${equity.toFixed(4)}`}
@@ -306,17 +306,31 @@ export default function Home() {
             tone={unrealisedPnl >= 0 ? "up" : "down"}
           />
           <StatCard
-            label="Realized PnL"
+            label="Realized PnL (net)"
             value={`${(state?.session_stats?.total_realized_pnl ?? 0) >= 0 ? "+" : ""}$${(state?.session_stats?.total_realized_pnl ?? 0).toFixed(4)}`}
-            sub={`${state?.session_stats?.total_cycles ?? 0} cycles this session`}
+            sub={`${state?.session_stats?.total_cycles ?? 0} cycles`}
             icon={<Target className="w-4 h-4" />}
             tone={(state?.session_stats?.total_realized_pnl ?? 0) >= 0 ? "up" : "down"}
+          />
+          <StatCard
+            label="Gross PnL"
+            value={`${(state?.session_stats?.gross_pnl ?? 0) >= 0 ? "+" : ""}$${(state?.session_stats?.gross_pnl ?? 0).toFixed(4)}`}
+            sub="Before fees"
+            icon={<TrendingUp className="w-4 h-4" />}
+            tone={(state?.session_stats?.gross_pnl ?? 0) >= 0 ? "up" : "down"}
+          />
+          <StatCard
+            label="Total Fees"
+            value={`${(state?.session_stats?.total_fees_paid ?? 0) >= 0 ? "-" : "+"}$${Math.abs(state?.session_stats?.total_fees_paid ?? 0).toFixed(4)}`}
+            sub={(state?.session_stats?.total_fees_paid ?? 0) < 0 ? "rebate earned" : "paid"}
+            icon={<Percent className="w-4 h-4" />}
+            tone={(state?.session_stats?.total_fees_paid ?? 0) < 0 ? "up" : "down"}
           />
           <StatCard
             label="Win Rate"
             value={`${(state?.session_stats?.win_rate ?? 0).toFixed(1)}%`}
             sub={`${state?.session_stats?.winning_cycles ?? 0}W / ${state?.session_stats?.losing_cycles ?? 0}L`}
-            icon={<Percent className="w-4 h-4" />}
+            icon={<Trophy className="w-4 h-4" />}
             tone={(state?.session_stats?.win_rate ?? 0) >= 50 ? "up" : "down"}
           />
           <StatCard
@@ -707,6 +721,7 @@ export default function Home() {
                         <TableHead className="text-right">Entry</TableHead>
                         <TableHead className="text-right">Exit</TableHead>
                         <TableHead className="text-right">Qty</TableHead>
+                        <TableHead className="text-right">Gross</TableHead>
                         <TableHead className="text-right">Fees</TableHead>
                         <TableHead className="text-right">Net PnL</TableHead>
                         <TableHead>Note</TableHead>
@@ -715,7 +730,7 @@ export default function Home() {
                     <TableBody>
                       {trades.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={9} className="text-center text-muted-foreground py-6 text-sm">
+                          <TableCell colSpan={10} className="text-center text-muted-foreground py-6 text-sm">
                             No trades yet this session. Start the bot to begin trading.
                           </TableCell>
                         </TableRow>
@@ -726,6 +741,9 @@ export default function Home() {
                             : (t.side === "Buy"
                                 ? (t.exit - t.entry) * t.qty
                                 : (t.entry - t.exit) * t.qty)
+                          const gross = typeof t.gross_pnl === "number"
+                            ? t.gross_pnl
+                            : pnl + (typeof t.fees === "number" ? t.fees : 0)
                           const fees = typeof t.fees === "number" ? t.fees : 0
                           return (
                             <TableRow key={i}>
@@ -740,13 +758,16 @@ export default function Home() {
                               <TableCell className="text-right font-mono">{t.exit}</TableCell>
                               <TableCell className="text-right font-mono">{t.qty}</TableCell>
                               <TableCell className="text-right font-mono text-muted-foreground text-xs">
+                                {gross >= 0 ? "+" : ""}${gross.toFixed(4)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-muted-foreground text-xs">
                                 {fees > 0 ? `-$${fees.toFixed(4)}` : fees < 0 ? `+$${Math.abs(fees).toFixed(4)}` : "—"}
                               </TableCell>
-                              <TableCell className={`text-right font-mono ${pnl >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                              <TableCell className={`text-right font-mono font-semibold ${pnl >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
                                 {pnl >= 0 ? "+" : ""}${pnl.toFixed(4)}
                               </TableCell>
                               <TableCell className="text-right font-mono text-muted-foreground text-xs">
-                                {t.note}
+                                <Badge variant="outline" className="text-xs">{t.note}</Badge>
                               </TableCell>
                             </TableRow>
                           )

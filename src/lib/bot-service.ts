@@ -236,10 +236,20 @@ export async function getOpenOrders(): Promise<any[]> {
  * Fetch actual execution data (fill prices + fees) from Bybit for a given symbol.
  * Used to compute accurate realized PnL instead of using the intended hedge price.
  *
- * Returns the average fill price, total fees (signed: +cost / -rebate), and total qty
- * for closing-side executions that occurred after the leg opened.
+ * Returns BOTH entry and exit side data, because:
+ *   - Entry leg (post-only limit) earns a MAKER REBATE (negative fee) — we get money back
+ *   - Exit leg earns rebate if filled as limit, or pays taker fee if market-closed (SL)
+ *   - Net PnL = gross_price_pnl - entry_fees - exit_fees
+ *
+ * Without entry fees, PnL was under-reported (we earn rebates on entry that weren't counted).
  */
-async function getActualCloseData(symbol: string, leg: { side: string; entry: number; qty: number; open_ts: number }): Promise<{ fill_price: number; fees: number; qty: number } | null> {
+async function getActualCloseData(symbol: string, leg: { side: string; entry: number; qty: number; open_ts: number }): Promise<{
+  exit_fill_price: number;
+  entry_fees: number;
+  exit_fees: number;
+  total_fees: number;
+  exit_qty: number;
+} | null> {
   try {
     const close_side = leg.side === "Buy" ? "Sell" : "Buy";
     const r: any = await bybitGet("/v5/execution/list", {
@@ -248,44 +258,157 @@ async function getActualCloseData(symbol: string, leg: { side: string; entry: nu
     const execs = r?.result?.list;
     if (!Array.isArray(execs)) return null;
 
-    // Filter: closing side, after leg opened
-    const cutoff = leg.open_ts;
-    const matching: any[] = [];
-    for (const exec of execs) {
-      const exec_ts = parseInt(exec.execTime) / 1000;
-      if (exec_ts < cutoff) continue;
-      if (exec.side !== close_side) continue;
-      matching.push(exec);
-    }
+    // Filter: executions after leg opened (with small buffer for clock skew)
+    const cutoff = leg.open_ts - 5;
+    const matching = execs.filter((e: any) => parseInt(e.execTime) / 1000 >= cutoff);
     if (matching.length === 0) return null;
 
-    // Sort ascending by time so we sum fills in order
-    matching.sort((a, b) => parseInt(a.execTime) - parseInt(b.execTime));
+    // Sort ascending by time
+    matching.sort((a: any, b: any) => parseInt(a.execTime) - parseInt(b.execTime));
 
-    // Sum until we've covered the leg's qty
-    let total_value = 0;
-    let total_qty = 0;
-    let total_fees = 0;
+    // Sum entry-side executions (same side as leg.side)
+    let entry_value = 0, entry_qty = 0, entry_fees = 0;
     for (const exec of matching) {
-      if (total_qty >= leg.qty - 1e-9) break;
-      const exec_qty = parseFloat(exec.execQty || "0");
-      const exec_px = parseFloat(exec.execPrice || "0");
-      const exec_fee = parseFloat(exec.execFee || "0");
-      total_value += exec_qty * exec_px;
-      total_qty += exec_qty;
-      total_fees += exec_fee;
+      if (exec.side !== leg.side) continue;
+      const q = parseFloat(exec.execQty || "0");
+      const p = parseFloat(exec.execPrice || "0");
+      const f = parseFloat(exec.execFee || "0");
+      entry_value += q * p;
+      entry_qty += q;
+      entry_fees += f;
     }
 
-    if (total_qty < leg.qty * 0.5) {
-      // Didn't find enough executions — can't compute accurately
+    // Sum exit-side executions (opposite side)
+    let exit_value = 0, exit_qty = 0, exit_fees = 0;
+    for (const exec of matching) {
+      if (exec.side !== close_side) continue;
+      const q = parseFloat(exec.execQty || "0");
+      const p = parseFloat(exec.execPrice || "0");
+      const f = parseFloat(exec.execFee || "0");
+      exit_value += q * p;
+      exit_qty += q;
+      exit_fees += f;
+    }
+
+    if (exit_qty < leg.qty * 0.5) {
+      // Didn't find enough exit executions — can't compute accurately
       return null;
     }
 
-    const avg_fill = total_qty > 0 ? total_value / total_qty : 0;
-    // total_fees is signed: positive = cost paid, negative = maker rebate received
-    return { fill_price: avg_fill, fees: total_fees, qty: total_qty };
+    const exit_fill_price = exit_qty > 0 ? exit_value / exit_qty : 0;
+    return {
+      exit_fill_price,
+      entry_fees,
+      exit_fees,
+      total_fees: entry_fees + exit_fees,
+      exit_qty,
+    };
   } catch (e: any) {
     botLog("DEBUG", `getActualCloseData failed for ${symbol}: ${e.message}`);
+    return null;
+  }
+}
+
+/**
+ * Record a closed leg in trade_history and update session_stats.
+ * Called from ALL close scenarios: natural hedge fill, SL-adverse, SL-timeout, spread-collapse.
+ * Previously, only natural fills were tracked — SL closes were silently dropped,
+ * which made PnL and win rate look better than reality.
+ *
+ * Fetches ACTUAL fill data from Bybit execution history (entry + exit prices + fees).
+ * Falls back to estimation if execution data is unavailable.
+ *
+ * Bybit DEMO fee structure (verified):
+ *   - Maker fee: +0.04% (4 bps, POSITIVE — we pay, no rebate on demo)
+ *   - Taker fee: +0.075-0.11% (varies by symbol)
+ *   - Round-trip maker-maker: ~8 bps cost
+ *   - Round-trip maker-taker (SL): ~15 bps cost
+ */
+async function recordClosedLeg(symbol: string, leg: OpenLeg, reason: string): Promise<void> {
+  // Use placed_ts-equivalent: leg.open_ts minus a buffer to capture entry executions
+  // that happened before the leg was registered (entry fills trigger leg creation)
+  const since_ts = leg.open_ts - 60;  // 60s buffer
+
+  const actual = await getActualCloseData(symbol, {
+    side: leg.side, entry: leg.entry_price, qty: leg.qty, open_ts: since_ts,
+  });
+
+  let cycle_pnl: number;
+  let gross_pnl: number;
+  let actual_exit: number;
+  let fees: number;
+  let note: string;
+
+  if (actual) {
+    gross_pnl = leg.side === "Buy"
+      ? (actual.exit_fill_price - leg.entry_price) * leg.qty
+      : (leg.entry_price - actual.exit_fill_price) * leg.qty;
+    cycle_pnl = gross_pnl - actual.total_fees;
+    actual_exit = actual.exit_fill_price;
+    fees = actual.total_fees;
+    note = reason;
+    botLog("INFO", `[CLOSE-ACTUAL] ${symbol} reason=${reason} exit=${actual.exit_fill_price} entry_fees=${actual.entry_fees.toFixed(4)} exit_fees=${actual.exit_fees.toFixed(4)} gross=${gross_pnl.toFixed(4)} net=${cycle_pnl.toFixed(4)}`);
+  } else {
+    // Fallback: estimate using intended hedge price.
+    // Bybit DEMO fees: maker ~4 bps, taker ~7.5-11 bps. Assume maker for both legs.
+    // Round-trip cost = 8 bps of notional = 0.0008 * (entry_notional + exit_notional)
+    gross_pnl = leg.side === "Buy"
+      ? ((leg.hedge_price ?? leg.entry_price) - leg.entry_price) * leg.qty
+      : (leg.entry_price - (leg.hedge_price ?? leg.entry_price)) * leg.qty;
+    const exit_px = leg.hedge_price ?? leg.entry_price;
+    const est_fee_rate = reason === "natural" ? 0.0008 : 0.0015;  // higher rate for SL (taker)
+    const est_notional = leg.entry_price * leg.qty + exit_px * leg.qty;
+    fees = est_notional * est_fee_rate;  // POSITIVE = cost on demo
+    cycle_pnl = gross_pnl - fees;
+    actual_exit = exit_px;
+    note = `${reason}-est`;
+    botLog("WARNING", `[CLOSE-EST] ${symbol} reason=${reason} execution data unavailable — estimating fees at ${(est_fee_rate * 10000).toFixed(0)}bps round-trip`);
+  }
+
+  trade_history.push({
+    ts: Date.now() / 1000, symbol,
+    side: leg.side, entry: leg.entry_price, exit: actual_exit,
+    qty: leg.qty, pnl: cycle_pnl, gross_pnl, fees, note,
+  });
+  session_stats.total_cycles += 1;
+  session_stats.total_realized_pnl += cycle_pnl;
+  session_stats.total_fees_paid += fees;
+  if (cycle_pnl > 0) session_stats.winning_cycles += 1;
+  else if (cycle_pnl < 0) session_stats.losing_cycles += 1;
+  if (trade_history.length > 200) trade_history.shift();
+}
+
+/**
+ * Fetch the ACTUAL entry fill price for a leg from Bybit execution history.
+ * Used to correct the entry_price stored in open_legs (which was previously
+ * the intended limit price, not the actual fill price).
+ *
+ * Returns the volume-weighted average entry fill price.
+ */
+async function getActualEntryData(symbol: string, side: string, since_ts: number): Promise<{ fill_price: number; qty: number } | null> {
+  try {
+    const r: any = await bybitGet("/v5/execution/list", {
+      category: CATEGORY, symbol, limit: "50",
+    });
+    const execs = r?.result?.list;
+    if (!Array.isArray(execs)) return null;
+
+    // Use a buffer: entry executions can happen slightly before since_ts due to network latency
+    const cutoff = since_ts - 5;
+    let total_value = 0, total_qty = 0;
+    for (const exec of execs) {
+      const exec_ts = parseInt(exec.execTime) / 1000;
+      if (exec_ts < cutoff) continue;
+      if (exec.side !== side) continue;
+      const q = parseFloat(exec.execQty || "0");
+      const p = parseFloat(exec.execPrice || "0");
+      total_value += q * p;
+      total_qty += q;
+    }
+
+    if (total_qty <= 0) return null;
+    return { fill_price: total_value / total_qty, qty: total_qty };
+  } catch (e: any) {
     return null;
   }
 }
@@ -538,6 +661,16 @@ async function onBuyFilled(pp: PendingPair, pos: any): Promise<void> {
   const pos_size = Math.abs(parseFloat(pos.size || "0"));
   botLog("INFO", `[FILL] ${pp.symbol} BUY filled @ ${pp.buy_price} | size=${pos_size} | checking hedge...`);
 
+  // Fetch ACTUAL entry fill price from Bybit (not the intended limit price).
+  // Post-only orders usually fill at the limit price, but partial fills or
+  // tick rounding can cause slight differences. Using the actual fill price
+  // ensures PnL and adverse_bps SL are computed against reality.
+  const entry_data = await getActualEntryData(pp.symbol, "Buy", pp.placed_ts);
+  const actual_entry = entry_data?.fill_price ?? pp.buy_price;
+  if (entry_data && Math.abs(actual_entry - pp.buy_price) > 1e-9) {
+    botLog("INFO", `  -> ${pp.symbol} actual entry fill=${actual_entry} (intended ${pp.buy_price})`);
+  }
+
   let sell_live = false;
   if (pp.sell_order_id) {
     try {
@@ -560,7 +693,7 @@ async function onBuyFilled(pp: PendingPair, pos: any): Promise<void> {
     const q = await getQuote(pp.symbol, 5);
     if (q) {
       const current_spread_bps = q.spread_bps;
-      const adverse_move_bps = ((q.ask - pp.buy_price) / pp.buy_price) * 10000;
+      const adverse_move_bps = ((q.ask - actual_entry) / actual_entry) * 10000;
       botLog("INFO", `  -> ${pp.symbol} current spread=${current_spread_bps.toFixed(1)}bps, ask moved ${adverse_move_bps >= 0 ? "+" : ""}${adverse_move_bps.toFixed(1)}bps from entry`);
       if (current_spread_bps < botConfig.min_spread_bps && !sell_live) {
         // Spread collapsed. If the SELL leg is also gone, we have no natural hedge.
@@ -569,6 +702,12 @@ async function onBuyFilled(pp: PendingPair, pos: any): Promise<void> {
         // Cancel any remaining SELL leg first
         if (pp.sell_order_id) await cancelOrder(pp.symbol, pp.sell_order_id);
         await placeMarketReduceClose(pp.symbol, "Sell", pos_size);
+        // Record this spread-collapse close in trade history
+        await recordClosedLeg(pp.symbol, {
+          symbol: pp.symbol, side: "Buy", qty: pos_size,
+          entry_price: actual_entry, open_ts: Date.now() / 1000,
+          hedge_order_id: null, hedge_price: q.bid,
+        }, "spread-collapse");
         pending.delete(pp.symbol);
         return;
       }
@@ -603,7 +742,7 @@ async function onBuyFilled(pp: PendingPair, pos: any): Promise<void> {
 
   open_legs.set(pp.symbol, {
     symbol: pp.symbol, side: "Buy", qty: pos_size,
-    entry_price: pp.buy_price, open_ts: Date.now() / 1000,
+    entry_price: actual_entry, open_ts: Date.now() / 1000,  // ACTUAL fill price
     hedge_order_id: hedge_id, hedge_price: hedge_px,
   });
   pending.delete(pp.symbol);
@@ -612,6 +751,13 @@ async function onBuyFilled(pp: PendingPair, pos: any): Promise<void> {
 async function onSellFilled(pp: PendingPair, pos: any): Promise<void> {
   const pos_size = Math.abs(parseFloat(pos.size || "0"));
   botLog("INFO", `[FILL] ${pp.symbol} SELL filled @ ${pp.sell_price} | size=${pos_size} | checking hedge...`);
+
+  // Fetch ACTUAL entry fill price from Bybit (not the intended limit price).
+  const entry_data = await getActualEntryData(pp.symbol, "Sell", pp.placed_ts);
+  const actual_entry = entry_data?.fill_price ?? pp.sell_price;
+  if (entry_data && Math.abs(actual_entry - pp.sell_price) > 1e-9) {
+    botLog("INFO", `  -> ${pp.symbol} actual entry fill=${actual_entry} (intended ${pp.sell_price})`);
+  }
 
   let buy_live = false;
   if (pp.buy_order_id) {
@@ -632,12 +778,17 @@ async function onSellFilled(pp: PendingPair, pos: any): Promise<void> {
     const q = await getQuote(pp.symbol, 5);
     if (q) {
       const current_spread_bps = q.spread_bps;
-      const adverse_move_bps = ((pp.sell_price - q.bid) / pp.sell_price) * 10000;
+      const adverse_move_bps = ((actual_entry - q.bid) / actual_entry) * 10000;
       botLog("INFO", `  -> ${pp.symbol} current spread=${current_spread_bps.toFixed(1)}bps, bid moved ${adverse_move_bps >= 0 ? "+" : ""}${adverse_move_bps.toFixed(1)}bps from entry`);
       if (current_spread_bps < botConfig.min_spread_bps && !buy_live) {
         botLog("WARNING", `  -> ${pp.symbol} SPREAD COLLAPSED to ${current_spread_bps.toFixed(1)}bps (< ${botConfig.min_spread_bps}) — market-closing to avoid risk`);
         if (pp.buy_order_id) await cancelOrder(pp.symbol, pp.buy_order_id);
         await placeMarketReduceClose(pp.symbol, "Buy", pos_size);
+        await recordClosedLeg(pp.symbol, {
+          symbol: pp.symbol, side: "Sell", qty: pos_size,
+          entry_price: actual_entry, open_ts: Date.now() / 1000,
+          hedge_order_id: null, hedge_price: q.ask,
+        }, "spread-collapse");
         pending.delete(pp.symbol);
         return;
       }
@@ -670,7 +821,7 @@ async function onSellFilled(pp: PendingPair, pos: any): Promise<void> {
 
   open_legs.set(pp.symbol, {
     symbol: pp.symbol, side: "Sell", qty: pos_size,
-    entry_price: pp.sell_price, open_ts: Date.now() / 1000,
+    entry_price: actual_entry, open_ts: Date.now() / 1000,  // ACTUAL fill price
     hedge_order_id: hedge_id, hedge_price: hedge_px,
   });
   pending.delete(pp.symbol);
@@ -731,6 +882,8 @@ async function manageOpenLegs(): Promise<void> {
       if (leg.hedge_order_id) await cancelOrder(sym, leg.hedge_order_id);
       const close_side = leg.side === "Buy" ? "Sell" : "Buy";
       await placeMarketReduceClose(sym, close_side, leg.qty);
+      // Record this SL-closed leg in trade history (was being silently dropped!)
+      await recordClosedLeg(sym, leg, "sl-adverse");
       open_legs.delete(sym);
       continue;
     }
@@ -741,6 +894,7 @@ async function manageOpenLegs(): Promise<void> {
       if (leg.hedge_order_id) await cancelOrder(sym, leg.hedge_order_id);
       const close_side = leg.side === "Buy" ? "Sell" : "Buy";
       await placeMarketReduceClose(sym, close_side, leg.qty);
+      await recordClosedLeg(sym, leg, "sl-timeout");
       open_legs.delete(sym);
       continue;
     }
@@ -869,52 +1023,18 @@ async function workerTick(): Promise<void> {
     const current_legs = new Set(open_legs.keys());
     for (const [sym, leg] of last_legs_snapshot) {
       if (!current_legs.has(sym)) {
-        // Fetch ACTUAL fill price and fees from Bybit execution history.
-        // This is accurate — the old method used the intended hedge limit price
-        // (which may differ from actual fill, especially after SL market-close)
-        // and ignored fees entirely (inflating PnL by ~4 bps round-trip).
-        const actual = await getActualCloseData(sym, {
-          side: leg.side, entry: leg.entry, qty: leg.qty, open_ts: leg.open_ts,
-        });
-
-        let cycle_pnl: number;
-        let actual_exit: number;
-        let fees: number;
-        let note: string;
-
-        if (actual) {
-          // Net PnL = gross PnL - fees (fees are signed: +cost, -rebate)
-          const gross_pnl = leg.side === "Buy"
-            ? (actual.fill_price - leg.entry) * leg.qty
-            : (leg.entry - actual.fill_price) * leg.qty;
-          cycle_pnl = gross_pnl - actual.fees;
-          actual_exit = actual.fill_price;
-          fees = actual.fees;
-          note = "closed";
-          botLog("INFO", `[CLOSE-ACTUAL] ${sym} fill=${actual.fill_price} fees=${fees.toFixed(4)} gross=${gross_pnl.toFixed(4)} net=${cycle_pnl.toFixed(4)}`);
-        } else {
-          // Fallback: estimate using intended hedge price (less accurate, no fees)
-          cycle_pnl = leg.side === "Buy"
-            ? (leg.hedge - leg.entry) * leg.qty
-            : (leg.entry - leg.hedge) * leg.qty;
-          actual_exit = leg.hedge;
-          fees = 0;
-          note = "estimated";
-          botLog("WARNING", `[CLOSE-EST] ${sym} execution data unavailable — using estimated PnL (no fees)`);
-        }
-
-        trade_history.push({
-          ts: now, symbol: sym,
-          side: leg.side, entry: leg.entry, exit: actual_exit,
-          qty: leg.qty, pnl: cycle_pnl, fees, note,
-        });
-        // Update session stats
-        session_stats.total_cycles += 1;
-        session_stats.total_realized_pnl += cycle_pnl;
-        session_stats.total_fees_paid += fees;
-        if (cycle_pnl > 0) session_stats.winning_cycles += 1;
-        else if (cycle_pnl < 0) session_stats.losing_cycles += 1;
-        if (trade_history.length > 200) trade_history.shift();
+        // Natural close: hedge filled (or position disappeared from Bybit).
+        // Use the unified recordClosedLeg function for consistent PnL math.
+        // The leg object from snapshot has the same shape as OpenLeg.
+        await recordClosedLeg(sym, {
+          symbol: sym,
+          side: leg.side,
+          qty: leg.qty,
+          entry_price: leg.entry,
+          hedge_price: leg.hedge,
+          open_ts: leg.open_ts,
+          hedge_order_id: null,
+        } as OpenLeg, "natural");
       }
     }
     last_legs_snapshot = new Map();
@@ -1140,6 +1260,12 @@ export async function getSnapshot(): Promise<any> {
       session_duration_sec: Math.round((Date.now() / 1000) - session_stats.session_start_ts),
       win_rate: session_stats.total_cycles > 0
         ? (session_stats.winning_cycles / session_stats.total_cycles) * 100
+        : 0,
+      gross_pnl: session_stats.total_realized_pnl + session_stats.total_fees_paid,
+      // gross_pnl = net_pnl + fees (because net = gross - fees)
+      // If fees are negative (rebate), gross > net. If fees positive (taker), gross < net.
+      avg_pnl_per_cycle: session_stats.total_cycles > 0
+        ? session_stats.total_realized_pnl / session_stats.total_cycles
         : 0,
     },
     halted,
