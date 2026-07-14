@@ -138,8 +138,12 @@ async function bybitPost(path: string, params: Record<string, any> = {}): Promis
 // ============================================================================
 export async function refreshInstruments(): Promise<void> {
   const r: any = await bybitGet("/v5/market/instruments-info", { category: CATEGORY, status: "Trading" });
+  const list = r?.result?.list;
+  if (!Array.isArray(list)) {
+    throw new Error(`instruments-info returned no list: ${r?.retMsg || JSON.stringify(r)}`);
+  }
   const cache = new Map<string, Instrument>();
-  for (const s of r.result.list) {
+  for (const s of list) {
     if (EXCLUDED_SYMBOLS.has(s.symbol)) continue;
     if (!s.symbol.endsWith("USDT")) continue;
     try {
@@ -162,8 +166,10 @@ export async function refreshInstruments(): Promise<void> {
 
 export async function getTopUniverse(n: number): Promise<string[]> {
   const r: any = await bybitGet("/v5/market/tickers", { category: CATEGORY });
+  const list = r?.result?.list;
+  if (!Array.isArray(list)) return [];
   const cands: [string, number][] = [];
-  for (const t of r.result.list) {
+  for (const t of list) {
     if (EXCLUDED_SYMBOLS.has(t.symbol)) continue;
     if (!instrumentCache.has(t.symbol)) continue;
     cands.push([t.symbol, parseFloat(t.turnover24h || "0")]);
@@ -175,9 +181,9 @@ export async function getTopUniverse(n: number): Promise<string[]> {
 async function getQuote(symbol: string, depth: number = 5): Promise<Quote | null> {
   try {
     const r: any = await bybitGet("/v5/market/orderbook", { category: CATEGORY, symbol, limit: String(depth) });
-    const b = r.result.b;
-    const a = r.result.a;
-    if (!b?.length || !a?.length) return null;
+    const b = r?.result?.b;
+    const a = r?.result?.a;
+    if (!Array.isArray(b) || !Array.isArray(a) || !b.length || !a.length) return null;
     const bid = parseFloat(b[0][0]);
     const ask = parseFloat(a[0][0]);
     const mid = (bid + ask) / 2;
@@ -208,12 +214,16 @@ export async function getEquity(): Promise<[number, number]> {
 
 export async function getPositions(): Promise<any[]> {
   const r: any = await bybitGet("/v5/position/list", { category: CATEGORY, settleCoin: QUOTE_COIN });
-  return r.result.list.filter((p: any) => Math.abs(parseFloat(p.size || "0")) > 0);
+  const list = r?.result?.list;
+  if (!Array.isArray(list)) return [];
+  return list.filter((p: any) => Math.abs(parseFloat(p.size || "0")) > 0);
 }
 
 export async function getOpenOrders(): Promise<any[]> {
   const r: any = await bybitGet("/v5/order/realtime", { category: CATEGORY, settleCoin: QUOTE_COIN, limit: "50" });
-  return r.result.list;
+  const list = r?.result?.list;
+  if (!Array.isArray(list)) return [];
+  return list;
 }
 
 async function setLeverage(symbol: string, lev: number): Promise<void> {
@@ -240,7 +250,14 @@ async function placeLimit(symbol: string, side: string, qty: number, price: numb
   if (opts.reduce_only) params.reduceOnly = true;
   try {
     const r: any = await bybitPost("/v5/order/create", params);
-    const oid = r.result.orderId;
+    // Bybit returns retCode != 0 on logical errors (e.g. agreement required)
+    if (r?.retCode && r.retCode !== 0) {
+      throw new Error(`Bybit retCode ${r.retCode}: ${r.retMsg || "unknown"}`);
+    }
+    const oid = r?.result?.orderId;
+    if (!oid) {
+      throw new Error(`no orderId in response: ${JSON.stringify(r)}`);
+    }
     botLog("INFO", `  -> PLACED ${side} ${qty} ${symbol} @ ${price} | post_only=${!!opts.post_only} reduce=${!!opts.reduce_only} oid=${oid}`);
     return oid;
   } catch (e: any) {
@@ -709,14 +726,55 @@ export async function stopBot(): Promise<any> {
     clearInterval(worker_interval);
     worker_interval = null;
   }
+  // Cancel any pending MM pairs so we don't leave orphan post-only orders on the book
+  botLog("INFO", `Stopping bot — cancelling ${pending.size} pending pair(s)`);
+  for (const [sym, pp] of Array.from(pending.entries())) {
+    if (pp.buy_order_id) await cancelOrder(sym, pp.buy_order_id);
+    if (pp.sell_order_id) await cancelOrder(sym, pp.sell_order_id);
+    pending.delete(sym);
+  }
   botLog("INFO", "Bot stopped");
-  return { status: "stopped" };
+  return { status: "stopped", cancelled_pairs: pending.size };
 }
 
 export async function cleanupBot(): Promise<any> {
   if (bot_running) await stopBot();
   await cleanupAll();
   return { status: "cleanup_done" };
+}
+
+/**
+ * Manually close a single position by symbol with a reduce-only market order.
+ * Useful if a hedge leg is stuck and the user wants to flatten immediately.
+ */
+export async function closePositionApi(symbol: string): Promise<any> {
+  if (!symbol) return { status: "error", error: "symbol required" };
+  let positions: any[] = [];
+  try { positions = await getPositions(); } catch (e: any) {
+    return { status: "error", error: `get_positions failed: ${e.message}` };
+  }
+  const pos = positions.find(p => p.symbol === symbol);
+  if (!pos) return { status: "not_found", symbol };
+  const size = Math.abs(parseFloat(pos.size || "0"));
+  if (size < 1e-9) return { status: "no_position", symbol };
+  const pos_side = pos.side || "Buy";
+  const close_side = pos_side === "Buy" ? "Sell" : "Buy";
+  botLog("INFO", `[MANUAL CLOSE] ${symbol} side=${pos_side} size=${size} -> placing ${close_side} market reduce-only`);
+  // Also cancel any existing hedge limit order so it doesn't conflict
+  const leg = open_legs.get(symbol);
+  if (leg?.hedge_order_id) {
+    await cancelOrder(symbol, leg.hedge_order_id);
+  }
+  // Cancel any pending pair too
+  const pp = pending.get(symbol);
+  if (pp) {
+    if (pp.buy_order_id) await cancelOrder(symbol, pp.buy_order_id);
+    if (pp.sell_order_id) await cancelOrder(symbol, pp.sell_order_id);
+    pending.delete(symbol);
+  }
+  await placeMarketReduceClose(symbol, close_side, size);
+  open_legs.delete(symbol);
+  return { status: "closed", symbol, side: close_side, size };
 }
 
 export async function getSnapshot(): Promise<any> {

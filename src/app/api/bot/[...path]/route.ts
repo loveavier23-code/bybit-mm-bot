@@ -87,6 +87,15 @@ export async function POST(
         const r = await bot.cleanupBot();
         return NextResponse.json(r);
       }
+      case "close-position": {
+        // Body: { symbol: "LABUSDT" }
+        const symbol = body?.symbol;
+        if (!symbol) {
+          return NextResponse.json({ error: "symbol required" }, { status: 400 });
+        }
+        const r = await bot.closePositionApi(symbol);
+        return NextResponse.json(r);
+      }
       case "config": {
         const r = bot.updateConfig(body || {});
         return NextResponse.json(r);

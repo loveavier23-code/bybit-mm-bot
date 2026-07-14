@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react"
 import {
   Activity, Play, Square, Trash2, RefreshCw, TrendingUp, TrendingDown,
-  Wallet, Layers, AlertTriangle, Settings, Terminal, Zap,
+  Wallet, Layers, AlertTriangle, Settings, Terminal, Zap, X,
 } from "lucide-react"
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
@@ -21,6 +21,17 @@ import {
 import {
   Tabs, TabsContent, TabsList, TabsTrigger,
 } from "@/components/ui/tabs"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -88,6 +99,13 @@ export default function Home() {
   const startBot = () => callAction("Start", () => api("/start", { method: "POST" }))
   const stopBot = () => callAction("Stop", () => api("/stop", { method: "POST" }))
   const cleanup = () => callAction("Cleanup", () => api("/cleanup", { method: "POST" }))
+  const closePosition = (symbol: string) =>
+    callAction(`Close ${symbol}`, () =>
+      api("/close-position", {
+        method: "POST",
+        body: JSON.stringify({ symbol }),
+      })
+    )
   const saveConfig = () => {
     if (!configDraft) return
     callAction("Save Config", () =>
@@ -157,19 +175,41 @@ export default function Home() {
               )}
               {isRunning ? "Stop" : "Start"}
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={cleanup}
-              disabled={busy !== null}
-            >
-              {busy === "Cleanup" ? (
-                <RefreshCw className="w-4 h-4 mr-1.5 animate-spin" />
-              ) : (
-                <Trash2 className="w-4 h-4 mr-1.5" />
-              )}
-              Cleanup
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busy !== null}
+                >
+                  {busy === "Cleanup" ? (
+                    <RefreshCw className="w-4 h-4 mr-1.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4 mr-1.5" />
+                  )}
+                  Cleanup
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Flatten all positions?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will cancel ALL open orders and close ALL open positions
+                    with reduce-only market orders. The bot will be stopped first
+                    if running. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={cleanup}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Yes, flatten everything
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             <Button
               size="sm"
               variant="ghost"
@@ -317,12 +357,13 @@ export default function Home() {
                         <TableHead className="text-right">uPnL</TableHead>
                         <TableHead className="text-right">Margin</TableHead>
                         <TableHead>Leverage</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {(state?.positions.length ?? 0) === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center text-muted-foreground py-6 text-sm">
+                          <TableCell colSpan={8} className="text-center text-muted-foreground py-6 text-sm">
                             No open positions
                           </TableCell>
                         </TableRow>
@@ -345,6 +386,40 @@ export default function Home() {
                             </TableCell>
                             <TableCell className="text-right font-mono">{p.margin.toFixed(4)}</TableCell>
                             <TableCell className="text-muted-foreground">{p.leverage}x</TableCell>
+                            <TableCell className="text-right">
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 px-2 text-xs hover:bg-destructive/10 hover:text-destructive"
+                                    disabled={busy !== null}
+                                  >
+                                    <X className="w-3 h-3 mr-1" /> Close
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Close {p.symbol} position?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will place a reduce-only market order to flatten your{" "}
+                                      <span className="font-semibold">{p.side}</span> {p.size}{" "}
+                                      {p.symbol} position immediately at the current best price.
+                                      Any pending hedge order on this symbol will be cancelled.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => closePosition(p.symbol)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Close position
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </TableCell>
                           </TableRow>
                         ))
                       )}
