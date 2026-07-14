@@ -50,6 +50,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState<string | null>(null)
   const [configDraft, setConfigDraft] = useState<BotConfig | null>(null)
+  const [configDirty, setConfigDirty] = useState(false)  // true when user has unsaved edits
   const [error, setError] = useState<string | null>(null)
   const [darkMode, setDarkMode] = useState(false)
   const [haltedNotified, setHaltedNotified] = useState(false)
@@ -98,14 +99,15 @@ export default function Home() {
       setLogs(l.logs)
       setTrades(t.trades)
       setEquityHistory(e.points)
-      setConfigDraft(s.config)
+      // Don't clobber user's unsaved config edits — only sync from server if clean
+      setConfigDraft(prev => configDirty ? prev : s.config)
       setError(null)
     } catch (err: any) {
       setError(err.message || String(err))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [configDirty])
 
   useEffect(() => {
     refresh()
@@ -146,7 +148,20 @@ export default function Home() {
         method: "POST",
         body: JSON.stringify(configDraft),
       })
-    )
+    ).then(() => {
+      setConfigDirty(false)
+    }).catch(() => { /* toast already shown */ })
+  }
+  const resetConfig = () => {
+    if (state) {
+      setConfigDraft(state.config)
+      setConfigDirty(false)
+    }
+  }
+  // Wrapper that marks config as dirty when user edits
+  const updateConfig = (patch: Partial<BotConfig>) => {
+    setConfigDraft(prev => prev ? { ...prev, ...patch } : prev)
+    setConfigDirty(true)
   }
 
   // ---- Render ----
@@ -814,7 +829,7 @@ export default function Home() {
                         value={configDraft.per_trade_margin_pct * 100}
                         step={0.1}
                         suffix="%"
-                        onChange={(v) => setConfigDraft({ ...configDraft, per_trade_margin_pct: v / 100 })}
+                        onChange={(v) => updateConfig({ per_trade_margin_pct: v / 100 })}
                         help="2% means 2% of equity as margin"
                       />
                       <ConfigNumber
@@ -822,68 +837,68 @@ export default function Home() {
                         value={configDraft.leverage}
                         step={1}
                         suffix="x"
-                        onChange={(v) => setConfigDraft({ ...configDraft, leverage: Math.round(v) })}
+                        onChange={(v) => updateConfig({ leverage: Math.round(v) })}
                       />
                       <ConfigNumber
                         label="Max concurrent symbols"
                         value={configDraft.max_concurrent_symbols}
                         step={1}
-                        onChange={(v) => setConfigDraft({ ...configDraft, max_concurrent_symbols: Math.round(v) })}
+                        onChange={(v) => updateConfig({ max_concurrent_symbols: Math.round(v) })}
                       />
                       <ConfigNumber
                         label="Min spread (bps)"
                         value={configDraft.min_spread_bps}
                         step={0.5}
                         suffix=" bps"
-                        onChange={(v) => setConfigDraft({ ...configDraft, min_spread_bps: v })}
+                        onChange={(v) => updateConfig({ min_spread_bps: v })}
                       />
                       <ConfigNumber
                         label="Target capture (bps)"
                         value={configDraft.target_capture_bps}
                         step={0.5}
                         suffix=" bps"
-                        onChange={(v) => setConfigDraft({ ...configDraft, target_capture_bps: v })}
+                        onChange={(v) => updateConfig({ target_capture_bps: v })}
                       />
                       <ConfigNumber
                         label="Order timeout (s)"
                         value={configDraft.order_timeout_sec}
                         step={5}
                         suffix="s"
-                        onChange={(v) => setConfigDraft({ ...configDraft, order_timeout_sec: Math.round(v) })}
+                        onChange={(v) => updateConfig({ order_timeout_sec: Math.round(v) })}
                       />
                       <ConfigNumber
                         label="Poll interval (s)"
                         value={configDraft.poll_interval_sec}
                         step={1}
                         suffix="s"
-                        onChange={(v) => setConfigDraft({ ...configDraft, poll_interval_sec: Math.round(v) })}
+                        onChange={(v) => updateConfig({ poll_interval_sec: Math.round(v) })}
                       />
                       <ConfigNumber
                         label="Scan interval (s)"
                         value={configDraft.scan_interval_sec}
                         step={5}
                         suffix="s"
-                        onChange={(v) => setConfigDraft({ ...configDraft, scan_interval_sec: Math.round(v) })}
+                        onChange={(v) => updateConfig({ scan_interval_sec: Math.round(v) })}
                       />
                       <ConfigNumber
                         label="Max drawdown (%)"
                         value={configDraft.max_drawdown_pct * 100}
                         step={1}
                         suffix="%"
-                        onChange={(v) => setConfigDraft({ ...configDraft, max_drawdown_pct: v / 100 })}
+                        onChange={(v) => updateConfig({ max_drawdown_pct: v / 100 })}
                       />
                       <ConfigNumber
                         label="Universe size"
                         value={configDraft.symbol_universe_size}
                         step={5}
-                        onChange={(v) => setConfigDraft({ ...configDraft, symbol_universe_size: Math.round(v) })}
+                        onChange={(v) => updateConfig({ symbol_universe_size: Math.round(v) })}
                       />
                       <ConfigNumber
                         label="Hedge timeout (s)"
                         value={configDraft.hedge_timeout_sec}
                         step={5}
                         suffix="s"
-                        onChange={(v) => setConfigDraft({ ...configDraft, hedge_timeout_sec: Math.round(v) })}
+                        onChange={(v) => updateConfig({ hedge_timeout_sec: Math.round(v) })}
                         help="Market-close if hedge doesn't fill in N sec"
                       />
                       <ConfigNumber
@@ -891,7 +906,7 @@ export default function Home() {
                         value={configDraft.max_adverse_bps}
                         step={1}
                         suffix=" bps"
-                        onChange={(v) => setConfigDraft({ ...configDraft, max_adverse_bps: v })}
+                        onChange={(v) => updateConfig({ max_adverse_bps: v })}
                         help="Market-close if unrealised loss exceeds N bps"
                       />
                     </div>
@@ -906,7 +921,7 @@ export default function Home() {
                       </div>
                       <Switch
                         checked={configDraft.auto_min_notional}
-                        onCheckedChange={(c) => setConfigDraft({ ...configDraft, auto_min_notional: c })}
+                        onCheckedChange={(c) => updateConfig({ auto_min_notional: c })}
                       />
                     </div>
 
@@ -919,7 +934,7 @@ export default function Home() {
                       </div>
                       <Switch
                         checked={configDraft.reprice_hedge}
-                        onCheckedChange={(c) => setConfigDraft({ ...configDraft, reprice_hedge: c })}
+                        onCheckedChange={(c) => updateConfig({ reprice_hedge: c })}
                       />
                     </div>
 
@@ -932,7 +947,7 @@ export default function Home() {
                       </div>
                       <Switch
                         checked={configDraft.verify_spread_at_fill}
-                        onCheckedChange={(c) => setConfigDraft({ ...configDraft, verify_spread_at_fill: c })}
+                        onCheckedChange={(c) => updateConfig({ verify_spread_at_fill: c })}
                       />
                     </div>
 
@@ -949,10 +964,15 @@ export default function Home() {
                       </Button>
                       <Button
                         variant="ghost"
-                        onClick={() => state && setConfigDraft(state.config)}
+                        onClick={resetConfig}
                       >
                         Reset
                       </Button>
+                      {configDirty && (
+                        <Badge variant="outline" className="text-amber-600 border-amber-600">
+                          unsaved changes
+                        </Badge>
+                      )}
                       <span className="text-xs text-muted-foreground ml-auto">
                         Bot will pick up new values on the next poll cycle.
                       </span>
