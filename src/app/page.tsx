@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react"
 import {
   Activity, Play, Square, Trash2, RefreshCw, TrendingUp, TrendingDown,
   Wallet, Layers, AlertTriangle, Settings, Terminal, Zap, X,
+  Moon, Sun, Trophy, Percent, Timer, Target,
 } from "lucide-react"
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
@@ -50,7 +51,39 @@ export default function Home() {
   const [busy, setBusy] = useState<string | null>(null)
   const [configDraft, setConfigDraft] = useState<BotConfig | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [darkMode, setDarkMode] = useState(false)
+  const [haltedNotified, setHaltedNotified] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // ---- Dark mode: toggle `dark` class on <html> ----
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add("dark")
+    } else {
+      document.documentElement.classList.remove("dark")
+    }
+  }, [darkMode])
+
+  // ---- Halt notification: fire toast when bot halts due to drawdown ----
+  useEffect(() => {
+    if (state?.halted && !haltedNotified) {
+      toast.error("Bot HALTED", {
+        description: "Max drawdown threshold reached. Trading stopped. Click Cleanup to flatten positions.",
+        duration: 15000,
+      })
+      setHaltedNotified(true)
+    } else if (!state?.halted && haltedNotified) {
+      setHaltedNotified(false)
+    }
+  }, [state?.halted, haltedNotified])
+
+  // ---- Auto-scroll log viewer to top when new logs arrive (logs are reversed = newest first) ----
+  const logTopRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (logTopRef.current) {
+      logTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" })
+    }
+  }, [logs.length])
 
   // ---- Polling ----
   const refresh = useCallback(async () => {
@@ -152,7 +185,12 @@ export default function Home() {
               <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${isRunning ? "bg-white animate-pulse" : "bg-muted-foreground"}`} />
               {isRunning ? "RUNNING" : "STOPPED"}
             </Badge>
-            {state?.last_error && (
+            {state?.halted && (
+              <Badge variant="destructive" className="ml-1 animate-pulse">
+                <AlertTriangle className="w-3 h-3 mr-1" /> HALTED
+              </Badge>
+            )}
+            {state?.last_error && !state?.halted && (
               <Badge variant="destructive" className="ml-1">
                 <AlertTriangle className="w-3 h-3 mr-1" /> Error
               </Badge>
@@ -215,8 +253,17 @@ export default function Home() {
               variant="ghost"
               onClick={refresh}
               disabled={busy !== null}
+              title="Refresh now"
             >
               <RefreshCw className="w-4 h-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setDarkMode(!darkMode)}
+              title="Toggle dark mode"
+            >
+              {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
           </div>
         </div>
@@ -237,7 +284,7 @@ export default function Home() {
         )}
 
         {/* Stat cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <StatCard
             label="Equity"
             value={`$${equity.toFixed(4)}`}
@@ -257,6 +304,20 @@ export default function Home() {
             sub={`${state?.positions.length ?? 0} open position${(state?.positions.length ?? 0) === 1 ? "" : "s"}`}
             icon={<Activity className="w-4 h-4" />}
             tone={unrealisedPnl >= 0 ? "up" : "down"}
+          />
+          <StatCard
+            label="Realized PnL"
+            value={`${(state?.session_stats?.total_realized_pnl ?? 0) >= 0 ? "+" : ""}$${(state?.session_stats?.total_realized_pnl ?? 0).toFixed(4)}`}
+            sub={`${state?.session_stats?.total_cycles ?? 0} cycles this session`}
+            icon={<Target className="w-4 h-4" />}
+            tone={(state?.session_stats?.total_realized_pnl ?? 0) >= 0 ? "up" : "down"}
+          />
+          <StatCard
+            label="Win Rate"
+            value={`${(state?.session_stats?.win_rate ?? 0).toFixed(1)}%`}
+            sub={`${state?.session_stats?.winning_cycles ?? 0}W / ${state?.session_stats?.losing_cycles ?? 0}L`}
+            icon={<Percent className="w-4 h-4" />}
+            tone={(state?.session_stats?.win_rate ?? 0) >= 50 ? "up" : "down"}
           />
           <StatCard
             label="Active Cycles"
@@ -646,8 +707,8 @@ export default function Home() {
                         <TableHead className="text-right">Entry</TableHead>
                         <TableHead className="text-right">Exit</TableHead>
                         <TableHead className="text-right">Qty</TableHead>
-                        <TableHead className="text-right">Spread</TableHead>
                         <TableHead className="text-right">PnL</TableHead>
+                        <TableHead className="text-right">Note</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -659,9 +720,11 @@ export default function Home() {
                         </TableRow>
                       ) : (
                         [...trades].reverse().map((t, i) => {
-                          const spread = t.side === "Buy"
-                            ? (t.exit - t.entry) * t.qty
-                            : (t.entry - t.exit) * t.qty
+                          const pnl = typeof t.pnl === "number"
+                            ? t.pnl
+                            : (t.side === "Buy"
+                                ? (t.exit - t.entry) * t.qty
+                                : (t.entry - t.exit) * t.qty)
                           return (
                             <TableRow key={i}>
                               <TableCell className="text-muted-foreground text-xs">
@@ -674,8 +737,8 @@ export default function Home() {
                               <TableCell className="text-right font-mono">{t.entry}</TableCell>
                               <TableCell className="text-right font-mono">{t.exit}</TableCell>
                               <TableCell className="text-right font-mono">{t.qty}</TableCell>
-                              <TableCell className="text-right font-mono text-emerald-600">
-                                +${spread.toFixed(4)}
+                              <TableCell className={`text-right font-mono ${pnl >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                                {pnl >= 0 ? "+" : ""}${pnl.toFixed(4)}
                               </TableCell>
                               <TableCell className="text-right font-mono text-muted-foreground text-xs">
                                 {t.note}
@@ -703,6 +766,7 @@ export default function Home() {
               <CardContent>
                 <ScrollArea className="h-72 rounded-md border bg-zinc-950">
                   <div className="p-3 font-mono text-xs space-y-0.5">
+                    <div ref={logTopRef} />
                     {logs.length === 0 ? (
                       <div className="text-zinc-500 py-4 text-center">No logs yet</div>
                     ) : (

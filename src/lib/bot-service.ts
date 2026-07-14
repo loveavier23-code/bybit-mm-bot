@@ -17,9 +17,10 @@ import { createHmac } from "node:crypto";
 // ============================================================================
 // CONFIG
 // ============================================================================
-const API_KEY = "YOUR_BYBIT_API_KEY";
-const API_SECRET = "YOUR_BYBIT_API_SECRET";
-const BASE_URL = "https://api-demo.bybit.com";
+// API keys can come from env vars (preferred for prod) or fall back to demo defaults
+const API_KEY = process.env.BYBIT_API_KEY || "YOUR_BYBIT_API_KEY";
+const API_SECRET = process.env.BYBIT_API_SECRET || "YOUR_BYBIT_API_SECRET";
+const BASE_URL = process.env.BYBIT_BASE_URL || "https://api-demo.bybit.com";
 const CATEGORY = "linear";
 const QUOTE_COIN = "USDT";
 const EXCLUDED_SYMBOLS = new Set(["BTCUSDT", "ETHUSDT"]);
@@ -350,6 +351,16 @@ const equity_history: any[] = [];
 const trade_history: any[] = [];
 let last_legs_snapshot: Map<string, any> = new Map();
 
+// Session stats (reset on dev server restart)
+let session_stats = {
+  total_cycles: 0,         // completed MM cycles (both legs filled)
+  winning_cycles: 0,       // cycles that captured positive spread
+  losing_cycles: 0,        // cycles that lost money (hedge slipped adverse)
+  total_realized_pnl: 0,   // sum of cycle PnLs in USDT
+  total_fees_paid: 0,      // estimate (not tracked precisely on demo)
+  session_start_ts: Date.now() / 1000,
+};
+
 // ============================================================================
 // BOT LOGIC
 // ============================================================================
@@ -620,11 +631,22 @@ async function workerTick(): Promise<void> {
     const current_legs = new Set(open_legs.keys());
     for (const [sym, leg] of last_legs_snapshot) {
       if (!current_legs.has(sym)) {
+        // Compute realized PnL for this cycle:
+        // If we were LONG (Buy leg filled first), PnL = (exit - entry) * qty
+        // If we were SHORT (Sell leg filled first), PnL = (entry - exit) * qty
+        const cycle_pnl = leg.side === "Buy"
+          ? (leg.hedge - leg.entry) * leg.qty
+          : (leg.entry - leg.hedge) * leg.qty;
         trade_history.push({
           ts: now, symbol: sym,
           side: leg.side, entry: leg.entry, exit: leg.hedge,
-          qty: leg.qty, note: "closed",
+          qty: leg.qty, pnl: cycle_pnl, note: "closed",
         });
+        // Update session stats
+        session_stats.total_cycles += 1;
+        session_stats.total_realized_pnl += cycle_pnl;
+        if (cycle_pnl > 0) session_stats.winning_cycles += 1;
+        else if (cycle_pnl < 0) session_stats.losing_cycles += 1;
         if (trade_history.length > 200) trade_history.shift();
       }
     }
@@ -797,14 +819,17 @@ export async function getSnapshot(): Promise<any> {
 
   const excluded = Array.from(new Set([...runtime_excluded, ...EXCLUDED_SYMBOLS])).sort();
 
-  // Fetch top spreads (limit to 6 for speed)
+  // Fetch top spreads (limit to 6 for speed) — parallelized
   let universe: string[] = universe_cache;
   if (universe.length === 0) {
     try { universe = await getTopUniverse(botConfig.symbol_universe_size); } catch { universe = []; }
   }
+  const spreadSyms = universe.slice(0, 6);
+  const quoteResults = await Promise.all(
+    spreadSyms.map(sym => getQuote(sym, 3).then(q => ({ sym, q })).catch(() => ({ sym, q: null })))
+  );
   const spreads: any[] = [];
-  for (const sym of universe.slice(0, 6)) {
-    const q = await getQuote(sym, 3);
+  for (const { sym, q } of quoteResults) {
     if (q) {
       spreads.push({
         symbol: sym, bid: q.bid, ask: q.ask,
@@ -847,6 +872,14 @@ export async function getSnapshot(): Promise<any> {
     universe,
     top_spreads: spreads.sort((a, b) => b.spread_bps - a.spread_bps).slice(0, 10),
     config: { ...botConfig },
+    session_stats: {
+      ...session_stats,
+      session_duration_sec: Math.round((Date.now() / 1000) - session_stats.session_start_ts),
+      win_rate: session_stats.total_cycles > 0
+        ? (session_stats.winning_cycles / session_stats.total_cycles) * 100
+        : 0,
+    },
+    halted,
   };
 }
 

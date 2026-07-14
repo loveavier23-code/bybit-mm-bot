@@ -31,11 +31,29 @@ export async function GET(
   try {
     switch (route) {
       case "health": {
-        return NextResponse.json({
-          status: "ok",
-          bot_running: false, // updated below if needed
-          last_error: null,
-        });
+        // Actually verify Bybit connectivity by fetching server time
+        try {
+          const t0 = Date.now();
+          const r: any = await fetch("https://api-demo.bybit.com/v5/market/time", {
+            signal: AbortSignal.timeout(5000),
+          }).then(r => r.json());
+          const latency = Date.now() - t0;
+          return NextResponse.json({
+            status: "ok",
+            bot_running: false, // singleton not exposed here; /state has it
+            last_error: null,
+            bybit_reachable: r?.retCode === 0,
+            bybit_latency_ms: latency,
+          });
+        } catch (e: any) {
+          return NextResponse.json({
+            status: "degraded",
+            bot_running: false,
+            last_error: `bybit unreachable: ${e.message}`,
+            bybit_reachable: false,
+            bybit_latency_ms: null,
+          }, { status: 503 });
+        }
       }
       case "state": {
         const s = await bot.getSnapshot();

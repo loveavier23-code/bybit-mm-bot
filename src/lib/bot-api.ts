@@ -48,6 +48,19 @@ export interface BotState {
   universe: string[];
   top_spreads: SpreadOp[];
   config: BotConfig;
+  session_stats?: SessionStats;
+  halted?: boolean;
+}
+
+export interface SessionStats {
+  total_cycles: number;
+  winning_cycles: number;
+  losing_cycles: number;
+  total_realized_pnl: number;
+  total_fees_paid: number;
+  session_start_ts: number;
+  session_duration_sec: number;
+  win_rate: number;
 }
 
 export interface Position {
@@ -131,5 +144,6 @@ export interface Trade {
   entry: number;
   exit: number;
   qty: number;
+  pnl?: number;
   note: string;
 }
