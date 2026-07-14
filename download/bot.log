@@ -1,0 +1,654 @@
+13:17:23 | INFO    | ======================================================================
+13:17:23 | INFO    | Bybit DEMO Market-Making Spread-Capture Bot
+13:17:23 | INFO    | ======================================================================
+13:17:23 | INFO    | Endpoint         : https://api-demo.bybit.com
+13:17:23 | INFO    | Excluded symbols : ['BTCUSDT', 'ETHUSDT']
+13:17:23 | INFO    | Margin per trade : 2.0% of equity
+13:17:23 | INFO    | Leverage         : 10x
+13:17:23 | INFO    | Max concurrent   : 3 symbols
+13:17:23 | INFO    | Min spread       : 8 bps
+13:17:23 | INFO    | Order timeout    : 45s
+13:17:23 | INFO    | Poll interval    : 3s
+13:17:23 | INFO    | Dry-run          : True
+13:17:23 | INFO    | Log file         : /home/z/my-project/download/bot.log
+13:17:23 | INFO    | ======================================================================
+13:17:23 | INFO    | Refreshing instrument metadata...
+13:17:23 | INFO    |   loaded 0 eligible instruments (BTC/ETH excluded)
+13:17:23 | INFO    | Initial universe (0): []
+13:17:23 | INFO    | Starting equity: 14.3083 USDT | available: 14.2353 USDT
+13:17:23 | INFO    | Per-trade margin ~0.2862 USDT -> notional ~2.8617 USDT
+13:17:23 | INFO    | [STATUS] equity=14.3083 avail=14.2353 pending=0 legs=0
+13:17:23 | INFO    | Bot stopped. Open orders/positions remain — please review on Bybit DEMO UI.
+13:17:23 | INFO    | Final pending: [] | open legs: []
+13:17:51 | INFO    | ======================================================================
+13:17:51 | INFO    | Bybit DEMO Market-Making Spread-Capture Bot
+13:17:51 | INFO    | ======================================================================
+13:17:51 | INFO    | Endpoint         : https://api-demo.bybit.com
+13:17:51 | INFO    | Excluded symbols : ['BTCUSDT', 'ETHUSDT']
+13:17:51 | INFO    | Margin per trade : 2.0% of equity
+13:17:51 | INFO    | Leverage         : 10x
+13:17:51 | INFO    | Max concurrent   : 3 symbols
+13:17:51 | INFO    | Min spread       : 8 bps
+13:17:51 | INFO    | Order timeout    : 45s
+13:17:51 | INFO    | Poll interval    : 3s
+13:17:51 | INFO    | Dry-run          : True
+13:17:51 | INFO    | Log file         : /home/z/my-project/download/bot.log
+13:17:51 | INFO    | ======================================================================
+13:17:51 | INFO    | Refreshing instrument metadata...
+13:17:52 | INFO    |   loaded 429 eligible instruments (BTC/ETH excluded)
+13:17:52 | INFO    | Initial universe (25): ['HYPEUSDT', 'LABUSDT', 'NEARUSDT', 'CLUSDT', 'BILLUSDT', 'DOGEUSDT', 'ALLOUSDT', 'ADAUSDT', '1000PEPEUSDT', 'MUUSDT', 'ENAUSDT', 'AVGOUSDT', 'DEXEUSDT', 'EVAAUSDT', 'AAVEUSDT', 'EWYUSDT', 'AVAXUSDT', 'LINKUSDT', 'ARBUSDT', 'GOOGLUSDT', 'BNBUSDT', 'FARTCOINUSDT', 'DRAMUSDT', 'LITUSDT', 'BABAUSDT']
+13:17:52 | INFO    | Starting equity: 14.3083 USDT | available: 14.2353 USDT
+13:17:52 | INFO    | Per-trade margin ~0.2862 USDT -> notional ~2.8617 USDT
+13:17:52 | INFO    | [DRY] LABUSDT: spread=33.4bps bid=0.299 ask=0.3
+13:17:52 | INFO    | [STATUS] equity=14.3083 avail=14.2353 pending=0 legs=0
+13:17:52 | INFO    | Bot stopped. Open orders/positions remain — please review on Bybit DEMO UI.
+13:17:52 | INFO    | Final pending: [] | open legs: []
+13:19:27 | INFO    | ======================================================================
+13:19:27 | INFO    | Bybit DEMO Market-Making Spread-Capture Bot
+13:19:27 | INFO    | ======================================================================
+13:19:27 | INFO    | Endpoint         : https://api-demo.bybit.com
+13:19:27 | INFO    | Excluded symbols : ['BTCUSDT', 'ETHUSDT']
+13:19:27 | INFO    | Margin per trade : 2.0% of equity
+13:19:27 | INFO    | Leverage         : 10x
+13:19:27 | INFO    | Max concurrent   : 3 symbols
+13:19:27 | INFO    | Min spread       : 8 bps
+13:19:27 | INFO    | Order timeout    : 45s
+13:19:27 | INFO    | Poll interval    : 3s
+13:19:27 | INFO    | Dry-run          : False
+13:19:27 | INFO    | Auto-min-notional: True
+13:19:27 | INFO    | Log file         : /home/z/my-project/download/bot.log
+13:19:27 | INFO    | ======================================================================
+13:19:27 | INFO    | Refreshing instrument metadata...
+13:19:27 | INFO    |   loaded 429 eligible instruments (BTC/ETH excluded)
+13:19:27 | INFO    | Initial universe (25): ['HYPEUSDT', 'LABUSDT', 'NEARUSDT', 'CLUSDT', 'BILLUSDT', 'DOGEUSDT', 'ALLOUSDT', '1000PEPEUSDT', 'ADAUSDT', 'MUUSDT', 'ENAUSDT', 'AVGOUSDT', 'DEXEUSDT', 'EVAAUSDT', 'AAVEUSDT', 'EWYUSDT', 'AVAXUSDT', 'LINKUSDT', 'ARBUSDT', 'GOOGLUSDT', 'BNBUSDT', 'FARTCOINUSDT', 'DRAMUSDT', 'LITUSDT', 'BABAUSDT']
+13:19:27 | INFO    | Starting equity: 14.3083 USDT | available: 14.2353 USDT
+13:19:27 | INFO    | Per-trade margin ~0.2862 USDT -> notional ~2.8617 USDT
+13:19:27 | WARNING | ======================================================================
+13:19:27 | WARNING | !! STRICT-2%% NOTIONAL (2.86 USDT) < EXCHANGE MIN (5.0 USDT)
+13:19:27 | WARNING | !! Most orders will be REJECTED. Options:
+13:19:27 | WARNING | !!   1) Top up demo account to >= 25 USDT
+13:19:27 | WARNING | !!   2) Re-run with --auto-min-notional (bumps size to 5.0 USDT, ignoring 2%% rule)
+13:19:27 | WARNING | ======================================================================
+13:19:27 | WARNING | reconcile get_open_orders failed: Missing some parameters that must be filled in, symbol or settleCoin or baseCoin (ErrCode: 10001) (ErrTime: 13:19:27).
+Request → GET https://api-demo.bybit.com/v5/order/realtime: category=linear&limit=50.
+13:19:29 | INFO    | [STATUS] equity=14.3083 avail=14.2353 pending=0 legs=0
+13:19:29 | INFO    | Bot stopped. Open orders/positions remain — please review on Bybit DEMO UI.
+13:19:29 | INFO    | Final pending: [] | open legs: []
+13:19:48 | INFO    | ======================================================================
+13:19:48 | INFO    | Bybit DEMO Market-Making Spread-Capture Bot
+13:19:48 | INFO    | ======================================================================
+13:19:48 | INFO    | Endpoint         : https://api-demo.bybit.com
+13:19:48 | INFO    | Excluded symbols : ['BTCUSDT', 'ETHUSDT']
+13:19:48 | INFO    | Margin per trade : 2.0% of equity
+13:19:48 | INFO    | Leverage         : 10x
+13:19:48 | INFO    | Max concurrent   : 3 symbols
+13:19:48 | INFO    | Min spread       : 8 bps
+13:19:48 | INFO    | Order timeout    : 45s
+13:19:48 | INFO    | Poll interval    : 3s
+13:19:48 | INFO    | Dry-run          : False
+13:19:48 | INFO    | Auto-min-notional: True
+13:19:48 | INFO    | Log file         : /home/z/my-project/download/bot.log
+13:19:48 | INFO    | ======================================================================
+13:19:48 | INFO    | Refreshing instrument metadata...
+13:19:48 | INFO    |   loaded 429 eligible instruments (BTC/ETH excluded)
+13:19:48 | INFO    | Initial universe (25): ['HYPEUSDT', 'LABUSDT', 'NEARUSDT', 'CLUSDT', 'BILLUSDT', 'DOGEUSDT', '1000PEPEUSDT', 'ALLOUSDT', 'ADAUSDT', 'MUUSDT', 'ENAUSDT', 'AVGOUSDT', 'DEXEUSDT', 'EVAAUSDT', 'AAVEUSDT', 'EWYUSDT', 'AVAXUSDT', 'LINKUSDT', 'ARBUSDT', 'GOOGLUSDT', 'BNBUSDT', 'FARTCOINUSDT', 'DRAMUSDT', 'LITUSDT', 'BABAUSDT']
+13:19:48 | INFO    | Starting equity: 14.3083 USDT | available: 14.2353 USDT
+13:19:48 | INFO    | Per-trade margin ~0.2862 USDT -> notional ~2.8617 USDT
+13:19:48 | WARNING | ======================================================================
+13:19:48 | WARNING | !! STRICT-2%% NOTIONAL (2.86 USDT) < EXCHANGE MIN (5.0 USDT)
+13:19:48 | WARNING | !! --auto-min-notional is ON: trades will be bumped to 5.0 USDT notional.
+13:19:48 | WARNING | !! This violates the 2%% rule — only use on small DEMO balances.
+13:19:48 | WARNING | ======================================================================
+13:19:50 | INFO    | [STATUS] equity=14.3083 avail=14.2353 pending=0 legs=0
+13:19:50 | INFO    | Bot stopped. Open orders/positions remain — please review on Bybit DEMO UI.
+13:19:50 | INFO    | Final pending: [] | open legs: []
+13:20:00 | INFO    | Refreshing instrument metadata...
+13:20:01 | INFO    |   loaded 429 eligible instruments (BTC/ETH excluded)
+13:20:14 | INFO    | ======================================================================
+13:20:14 | INFO    | Bybit DEMO Market-Making Spread-Capture Bot
+13:20:14 | INFO    | ======================================================================
+13:20:14 | INFO    | Endpoint         : https://api-demo.bybit.com
+13:20:14 | INFO    | Excluded symbols : ['BTCUSDT', 'ETHUSDT']
+13:20:14 | INFO    | Margin per trade : 2.0% of equity
+13:20:14 | INFO    | Leverage         : 10x
+13:20:14 | INFO    | Max concurrent   : 3 symbols
+13:20:14 | INFO    | Min spread       : 8 bps
+13:20:14 | INFO    | Order timeout    : 45s
+13:20:14 | INFO    | Poll interval    : 3s
+13:20:14 | INFO    | Dry-run          : False
+13:20:14 | INFO    | Auto-min-notional: True
+13:20:14 | INFO    | Log file         : /home/z/my-project/download/bot.log
+13:20:14 | INFO    | ======================================================================
+13:20:14 | INFO    | Refreshing instrument metadata...
+13:20:15 | INFO    |   loaded 429 eligible instruments (BTC/ETH excluded)
+13:20:15 | INFO    | Initial universe (25): ['HYPEUSDT', 'LABUSDT', 'NEARUSDT', 'CLUSDT', 'BILLUSDT', 'DOGEUSDT', '1000PEPEUSDT', 'ALLOUSDT', 'ADAUSDT', 'MUUSDT', 'ENAUSDT', 'AVGOUSDT', 'DEXEUSDT', 'EVAAUSDT', 'AAVEUSDT', 'EWYUSDT', 'AVAXUSDT', 'LINKUSDT', 'ARBUSDT', 'GOOGLUSDT', 'BNBUSDT', 'FARTCOINUSDT', 'DRAMUSDT', 'LITUSDT', 'BABAUSDT']
+13:20:15 | INFO    | Starting equity: 14.3083 USDT | available: 14.2353 USDT
+13:20:15 | INFO    | Per-trade margin ~0.2862 USDT -> notional ~2.8617 USDT
+13:20:15 | WARNING | ======================================================================
+13:20:15 | WARNING | !! STRICT-2%% NOTIONAL (2.86 USDT) < EXCHANGE MIN (5.0 USDT)
+13:20:15 | WARNING | !! --auto-min-notional is ON: trades will be bumped to 5.0 USDT notional.
+13:20:15 | WARNING | !! This violates the 2%% rule — only use on small DEMO balances.
+13:20:15 | WARNING | ======================================================================
+13:20:17 | INFO    | [STATUS] equity=14.3083 avail=14.2353 pending=0 legs=0
+13:20:22 | INFO    | [STATUS] equity=14.3083 avail=14.2353 pending=0 legs=0
+13:20:26 | INFO    | [STATUS] equity=14.3083 avail=14.2353 pending=0 legs=0
+13:20:31 | INFO    | [STATUS] equity=14.3083 avail=14.2353 pending=0 legs=0
+13:20:35 | INFO    | [STATUS] equity=14.3083 avail=14.2353 pending=0 legs=0
+13:20:39 | INFO    | [STATUS] equity=14.3083 avail=14.2353 pending=0 legs=0
+13:20:44 | INFO    | [STATUS] equity=14.3083 avail=14.2353 pending=0 legs=0
+13:20:47 | INFO    | Refreshing instrument metadata...
+13:20:47 | INFO    |   loaded 429 eligible instruments (BTC/ETH excluded)
+13:20:47 | INFO    | Refreshed universe (25): ['HYPEUSDT', 'LABUSDT', 'NEARUSDT', 'CLUSDT', 'BILLUSDT', 'DOGEUSDT', '1000PEPEUSDT', 'ALLOUSDT', 'ADAUSDT', 'MUUSDT']...
+13:20:49 | INFO    | [STATUS] equity=14.3083 avail=14.2353 pending=0 legs=0
+13:20:53 | INFO    | [STATUS] equity=14.3083 avail=14.2353 pending=0 legs=0
+13:20:57 | INFO    | [STATUS] equity=14.3083 avail=14.2353 pending=0 legs=0
+13:20:59 | WARNING | Signal received — shutting down...
+13:21:00 | INFO    | Bot stopped. Open orders/positions remain — please review on Bybit DEMO UI.
+13:21:00 | INFO    | Final pending: [] | open legs: []
+13:22:05 | INFO    | ======================================================================
+13:22:05 | INFO    | Bybit DEMO Market-Making Spread-Capture Bot
+13:22:05 | INFO    | ======================================================================
+13:22:05 | INFO    | Endpoint         : https://api-demo.bybit.com
+13:22:05 | INFO    | Excluded symbols : ['BTCUSDT', 'ETHUSDT']
+13:22:05 | INFO    | Margin per trade : 2.0% of equity
+13:22:05 | INFO    | Leverage         : 10x
+13:22:05 | INFO    | Max concurrent   : 3 symbols
+13:22:05 | INFO    | Min spread       : 8 bps
+13:22:05 | INFO    | Order timeout    : 45s
+13:22:05 | INFO    | Poll interval    : 3s
+13:22:05 | INFO    | Dry-run          : False
+13:22:05 | INFO    | Auto-min-notional: True
+13:22:05 | INFO    | Log file         : /home/z/my-project/download/bot.log
+13:22:05 | INFO    | ======================================================================
+13:22:05 | INFO    | Refreshing instrument metadata...
+13:22:05 | INFO    |   loaded 429 eligible instruments (BTC/ETH excluded)
+13:22:05 | INFO    | Initial universe (25): ['HYPEUSDT', 'LABUSDT', 'NEARUSDT', 'CLUSDT', 'BILLUSDT', 'DOGEUSDT', '1000PEPEUSDT', 'ADAUSDT', 'ALLOUSDT', 'MUUSDT', 'ENAUSDT', 'AVGOUSDT', 'DEXEUSDT', 'EVAAUSDT', 'LINKUSDT', 'AAVEUSDT', 'EWYUSDT', 'AVAXUSDT', 'ARBUSDT', 'GOOGLUSDT', 'BNBUSDT', 'FARTCOINUSDT', 'DRAMUSDT', 'LITUSDT', 'PUMPFUNUSDT']
+13:22:05 | INFO    | Starting equity: 14.3217 USDT | available: 13.7377 USDT
+13:22:05 | INFO    | Per-trade margin ~0.2864 USDT -> notional ~2.8643 USDT
+13:22:05 | WARNING | ======================================================================
+13:22:05 | WARNING | !! STRICT-2%% NOTIONAL (2.86 USDT) < EXCHANGE MIN (5.0 USDT)
+13:22:05 | WARNING | !! --auto-min-notional is ON: trades will be bumped to 5.0 USDT notional.
+13:22:05 | WARNING | !! This violates the 2%% rule — only use on small DEMO balances.
+13:22:05 | WARNING | ======================================================================
+13:22:06 | INFO    | [OPP] LABUSDT: spread=33.7bps bid=0.296 ask=0.297 mid=0.2965 qty=17.0
+13:22:06 | INFO    |   -> PLACED Buy 17.0 LABUSDT @ 0.296 | post_only=True reduce=False oid=3cf26d8e-8aa9-4e31-9921-cb5a120e824b
+13:22:06 | INFO    |   -> PLACED Sell 17.0 LABUSDT @ 0.297 | post_only=True reduce=False oid=3e50d800-1526-4e5b-8348-2ac6cb864333
+13:22:07 | INFO    | [STATUS] equity=14.3431 avail=13.7598 pending=1 legs=0
+13:22:11 | INFO    | [FILL] LABUSDT BUY filled @ 0.296 | size=17 | hedging...
+13:22:11 | WARNING |   -> place_order FAILED Sell LABUSDT qty=17.0 px=0.297: reduce-only order has same side with current position (ErrCode: 110017) (ErrTime: 13:22:11).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "LABUSDT", "side": "Sell", "orderType": "Limit", "qty": "17.0", "price": "0.297", "timeInForce": "GTC", "reduceOnly": true}.
+13:22:11 | WARNING | set_leverage EVAAUSDT failed: cannot set leverage [1000] gt maxLeverage [500] by risk limit (ErrCode: 110013) (ErrTime: 13:22:11).
+Request → POST https://api-demo.bybit.com/v5/position/set-leverage: {"category": "linear", "symbol": "EVAAUSDT", "buyLeverage": "10", "sellLeverage": "10"}.
+13:22:11 | INFO    | [OPP] EVAAUSDT: spread=8.4bps bid=1.1853 ask=1.1862000000000001 mid=1.1858 qty=4.3
+13:22:11 | INFO    |   -> PLACED Buy 4.3 EVAAUSDT @ 1.1853 | post_only=True reduce=False oid=12bae598-e147-4825-8bee-67b84f9b7e6e
+13:22:11 | INFO    |   -> PLACED Sell 4.3 EVAAUSDT @ 1.1862000000000001 | post_only=True reduce=False oid=e1e195c0-8b42-4af0-a1a8-f98a40ff296a
+13:22:12 | INFO    | [STATUS] equity=14.3450 avail=12.7368 pending=1 legs=1
+13:22:15 | INFO    | [FILL] EVAAUSDT BUY filled @ 1.1853 | size=4.3 | hedging...
+13:22:15 | WARNING |   -> place_order FAILED Sell EVAAUSDT qty=4.3 px=1.1862000000000001: reduce-only order has same side with current position (ErrCode: 110017) (ErrTime: 13:22:15).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "EVAAUSDT", "side": "Sell", "orderType": "Limit", "qty": "4.3", "price": "1.1862000000000001", "timeInForce": "GTC", "reduceOnly": true}.
+13:22:16 | INFO    | [STATUS] equity=14.3394 avail=12.7305 pending=0 legs=2
+13:22:20 | INFO    | [STATUS] equity=14.3334 avail=12.7234 pending=0 legs=2
+13:22:25 | INFO    | [STATUS] equity=14.3374 avail=12.7283 pending=0 legs=2
+13:22:29 | INFO    | [STATUS] equity=14.3326 avail=12.7224 pending=0 legs=2
+13:22:33 | INFO    | [STATUS] equity=14.3326 avail=12.7224 pending=0 legs=2
+13:22:36 | INFO    | Refreshing instrument metadata...
+13:22:36 | INFO    |   loaded 429 eligible instruments (BTC/ETH excluded)
+13:22:36 | INFO    | Refreshed universe (25): ['HYPEUSDT', 'LABUSDT', 'NEARUSDT', 'CLUSDT', 'BILLUSDT', 'DOGEUSDT', '1000PEPEUSDT', 'ADAUSDT', 'ALLOUSDT', 'MUUSDT']...
+13:22:37 | INFO    | [CLOSE] EVAAUSDT leg closed | side=Buy entry=1.1853 exit=1.1862000000000001 qty=4.3 closedPnl=0.0000 USDT
+13:22:38 | INFO    | [STATUS] equity=14.3453 avail=13.7623 pending=0 legs=1
+13:22:42 | INFO    | [STATUS] equity=14.3483 avail=13.7657 pending=0 legs=1
+13:22:46 | INFO    | [STATUS] equity=14.3511 avail=13.7687 pending=0 legs=1
+13:22:50 | INFO    | [OPP] BILLUSDT: spread=9.7bps bid=0.05172 ask=0.05176000000000001 mid=0.0517 qty=100.0
+13:22:50 | INFO    |   -> PLACED Buy 100.0 BILLUSDT @ 0.05172 | post_only=True reduce=False oid=f874a07e-fac7-4cde-b7b3-24e4213daeb9
+13:22:50 | INFO    |   -> PLACED Sell 100.0 BILLUSDT @ 0.05176000000000001 | post_only=True reduce=False oid=78ffe9f5-85a3-4bf5-8461-8d2cf0ae1a0d
+13:22:51 | INFO    | [STATUS] equity=14.3353 avail=13.2239 pending=1 legs=1
+13:22:55 | INFO    | [STATUS] equity=14.3536 avail=13.2487 pending=1 legs=1
+13:22:58 | INFO    | [FILL] BILLUSDT BUY filled @ 0.05172 | size=100 | hedging...
+13:22:58 | INFO    |   -> PLACED Sell 100.0 BILLUSDT @ 0.05176000000000001 | post_only=False reduce=True oid=537aa4de-a002-4187-8309-c516f95f716f
+13:22:59 | INFO    | [STATUS] equity=14.3583 avail=13.7758 pending=0 legs=2
+13:23:02 | INFO    | [CLOSE] BILLUSDT leg closed | side=Buy entry=0.05172 exit=0.05176000000000001 qty=100.0 closedPnl=0.0000 USDT
+13:23:03 | INFO    | [STATUS] equity=14.3583 avail=13.7758 pending=0 legs=1
+13:23:07 | INFO    | [STATUS] equity=14.3412 avail=13.7569 pending=0 legs=1
+13:23:10 | INFO    | Refreshing instrument metadata...
+13:23:11 | INFO    |   loaded 429 eligible instruments (BTC/ETH excluded)
+13:23:11 | INFO    | Refreshed universe (25): ['HYPEUSDT', 'LABUSDT', 'NEARUSDT', 'CLUSDT', 'BILLUSDT', 'DOGEUSDT', '1000PEPEUSDT', 'ADAUSDT', 'ALLOUSDT', 'MUUSDT']...
+13:23:12 | INFO    | [STATUS] equity=14.3430 avail=13.7589 pending=0 legs=1
+13:23:15 | INFO    | [OPP] BILLUSDT: spread=9.7bps bid=0.05165 ask=0.0517 mid=0.0517 qty=100.0
+13:23:15 | INFO    |   -> PLACED Buy 100.0 BILLUSDT @ 0.05165 | post_only=True reduce=False oid=feb0506b-fdcc-4718-becd-cd4d634d6901
+13:23:15 | INFO    |   -> PLACED Sell 100.0 BILLUSDT @ 0.0517 | post_only=True reduce=False oid=af04789f-2981-4ee8-97a1-c087c3814ab5
+13:23:16 | INFO    | [STATUS] equity=14.3452 avail=13.2328 pending=1 legs=1
+13:23:19 | INFO    | [FILL] BILLUSDT BUY filled @ 0.05165 | size=100 | hedging...
+13:23:19 | WARNING |   -> place_order FAILED Sell BILLUSDT qty=100.0 px=0.0517: reduce-only order has same side with current position (ErrCode: 110017) (ErrTime: 13:23:19).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "BILLUSDT", "side": "Sell", "orderType": "Limit", "qty": "100.0", "price": "0.0517", "timeInForce": "GTC", "reduceOnly": true}.
+13:23:20 | WARNING | set_leverage EVAAUSDT failed: cannot set leverage [1000] gt maxLeverage [500] by risk limit (ErrCode: 110013) (ErrTime: 13:23:20).
+Request → POST https://api-demo.bybit.com/v5/position/set-leverage: {"category": "linear", "symbol": "EVAAUSDT", "buyLeverage": "10", "sellLeverage": "10"}.
+13:23:20 | INFO    | [OPP] EVAAUSDT: spread=8.5bps bid=1.1745 ask=1.1755 mid=1.1750 qty=4.3
+13:23:20 | INFO    |   -> PLACED Buy 4.3 EVAAUSDT @ 1.1745 | post_only=True reduce=False oid=bb675fc3-4ef8-4e74-ba4f-30120d60983a
+13:23:20 | INFO    |   -> PLACED Sell 4.3 EVAAUSDT @ 1.1755 | post_only=True reduce=False oid=0c0848d9-c2cd-425f-bb2f-a6fc7dc9abf7
+13:23:20 | INFO    | [STATUS] equity=14.3454 avail=12.2200 pending=1 legs=2
+13:23:23 | INFO    | [STATUS] equity=14.3454 avail=12.2200 pending=1 legs=2
+13:23:27 | INFO    | [FILL] EVAAUSDT BUY filled @ 1.1745 | size=4.3 | hedging...
+13:23:27 | INFO    |   -> PLACED Sell 4.3 EVAAUSDT @ 1.1755 | post_only=False reduce=True oid=c0aa27ed-7d18-4446-8fb4-97ccc875c8e9
+13:23:27 | INFO    | [STATUS] equity=14.3609 avail=12.2411 pending=0 legs=3
+13:23:30 | INFO    | [CLOSE] EVAAUSDT leg closed | side=Buy entry=1.1745 exit=1.1755 qty=4.3 closedPnl=0.0000 USDT
+13:23:31 | WARNING | set_leverage EVAAUSDT failed: cannot set leverage [1000] gt maxLeverage [500] by risk limit (ErrCode: 110013) (ErrTime: 13:23:31).
+Request → POST https://api-demo.bybit.com/v5/position/set-leverage: {"category": "linear", "symbol": "EVAAUSDT", "buyLeverage": "10", "sellLeverage": "10"}.
+13:23:31 | INFO    | [OPP] EVAAUSDT: spread=8.5bps bid=1.1740000000000002 ask=1.1751 mid=1.1746 qty=4.3
+13:23:31 | INFO    |   -> PLACED Buy 4.3 EVAAUSDT @ 1.1740000000000002 | post_only=True reduce=False oid=f26051a6-5d7a-4009-b153-d5e3811d8ad9
+13:23:31 | INFO    |   -> PLACED Sell 4.3 EVAAUSDT @ 1.1751 | post_only=True reduce=False oid=7cf27f9a-728e-4419-b890-6cca0db0ff30
+13:23:31 | INFO    | [STATUS] equity=14.3537 avail=12.2257 pending=1 legs=2
+13:23:34 | INFO    |   EVAAUSDT: both legs gone, no position — clear pending
+13:23:36 | INFO    | [STATUS] equity=14.3595 avail=13.2541 pending=0 legs=2
+13:23:40 | INFO    | [STATUS] equity=14.3593 avail=13.2543 pending=0 legs=2
+13:23:43 | INFO    | Refreshing instrument metadata...
+13:23:43 | INFO    |   loaded 429 eligible instruments (BTC/ETH excluded)
+13:23:43 | INFO    | Refreshed universe (25): ['HYPEUSDT', 'LABUSDT', 'NEARUSDT', 'CLUSDT', 'BILLUSDT', 'DOGEUSDT', '1000PEPEUSDT', 'ADAUSDT', 'ALLOUSDT', 'MUUSDT']...
+13:23:44 | INFO    | [STATUS] equity=14.3615 avail=13.2567 pending=0 legs=2
+13:23:48 | INFO    | [STATUS] equity=14.3615 avail=13.2567 pending=0 legs=2
+13:23:52 | INFO    | [STATUS] equity=14.3725 avail=13.2684 pending=0 legs=2
+13:23:57 | INFO    | [STATUS] equity=14.3586 avail=13.2534 pending=0 legs=2
+13:24:01 | INFO    | [STATUS] equity=14.3538 avail=13.2480 pending=0 legs=2
+13:24:08 | INFO    | ======================================================================
+13:24:08 | INFO    | Bybit DEMO Market-Making Spread-Capture Bot
+13:24:08 | INFO    | ======================================================================
+13:24:08 | INFO    | Endpoint         : https://api-demo.bybit.com
+13:24:08 | INFO    | Excluded symbols : ['BTCUSDT', 'ETHUSDT']
+13:24:08 | INFO    | Margin per trade : 2.0% of equity
+13:24:08 | INFO    | Leverage         : 10x
+13:24:08 | INFO    | Max concurrent   : 3 symbols
+13:24:08 | INFO    | Min spread       : 8 bps
+13:24:08 | INFO    | Order timeout    : 45s
+13:24:08 | INFO    | Poll interval    : 3s
+13:24:08 | INFO    | Dry-run          : False
+13:24:08 | INFO    | Auto-min-notional: True
+13:24:08 | INFO    | Log file         : /home/z/my-project/download/bot.log
+13:24:08 | INFO    | ======================================================================
+13:24:08 | INFO    | Refreshing instrument metadata...
+13:24:08 | INFO    |   loaded 429 eligible instruments (BTC/ETH excluded)
+13:24:08 | INFO    | Initial universe (25): ['HYPEUSDT', 'LABUSDT', 'NEARUSDT', 'CLUSDT', 'BILLUSDT', 'DOGEUSDT', '1000PEPEUSDT', 'ADAUSDT', 'ALLOUSDT', 'MUUSDT', 'ENAUSDT', 'AVGOUSDT', 'DEXEUSDT', 'EVAAUSDT', 'LINKUSDT', 'AAVEUSDT', 'AVAXUSDT', 'EWYUSDT', 'ARBUSDT', 'GOOGLUSDT', 'BNBUSDT', 'FARTCOINUSDT', 'DRAMUSDT', 'LITUSDT', 'PUMPFUNUSDT']
+13:24:08 | INFO    | Starting equity: 14.3508 USDT | available: 13.2447 USDT
+13:24:08 | INFO    | Per-trade margin ~0.2870 USDT -> notional ~2.8702 USDT
+13:24:08 | WARNING | ======================================================================
+13:24:08 | WARNING | !! STRICT-2%% NOTIONAL (2.87 USDT) < EXCHANGE MIN (5.0 USDT)
+13:24:08 | WARNING | !! --auto-min-notional is ON: trades will be bumped to 5.0 USDT notional.
+13:24:08 | WARNING | !! This violates the 2%% rule — only use on small DEMO balances.
+13:24:08 | WARNING | ======================================================================
+13:24:09 | INFO    | [OPP] LABUSDT: spread=33.5bps bid=0.298 ask=0.299 mid=0.2985 qty=17.0
+13:24:09 | INFO    |   -> PLACED Buy 17.0 LABUSDT @ 0.298 | post_only=True reduce=False oid=3ecafe49-d0e6-4de9-a117-1b4fa1a651c1
+13:24:09 | INFO    |   -> PLACED Sell 17.0 LABUSDT @ 0.299 | post_only=True reduce=False oid=d7b16030-b138-484c-bcd3-f84ce3735d85
+13:24:10 | INFO    | [STATUS] equity=14.3169 avail=13.2076 pending=1 legs=0
+13:24:14 | INFO    | [FILL] LABUSDT BUY filled @ 0.298 | size=17 | hedging...
+13:24:14 | WARNING |   -> place_order FAILED Sell LABUSDT qty=17.0 px=0.299: reduce-only order has same side with current position (ErrCode: 110017) (ErrTime: 13:24:14).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "LABUSDT", "side": "Sell", "orderType": "Limit", "qty": "17.0", "price": "0.299", "timeInForce": "GTC", "reduceOnly": true}.
+13:24:15 | INFO    | [STATUS] equity=14.3197 avail=13.2106 pending=0 legs=1
+13:24:19 | INFO    | [CLOSE] LABUSDT leg closed | side=Buy entry=0.298 exit=0.299 qty=17.0 closedPnl=0.0000 USDT
+13:24:19 | INFO    | [OPP] LABUSDT: spread=33.5bps bid=0.298 ask=0.299 mid=0.2985 qty=17.0
+13:24:19 | INFO    |   -> PLACED Buy 17.0 LABUSDT @ 0.298 | post_only=True reduce=False oid=6c3199bb-0682-446a-932c-9a2834429fe0
+13:24:19 | INFO    |   -> PLACED Sell 17.0 LABUSDT @ 0.299 | post_only=True reduce=False oid=bc55bc88-8e81-4350-9fe9-19d9ee7af674
+13:24:20 | INFO    | [STATUS] equity=14.3355 avail=13.2208 pending=1 legs=0
+13:24:24 | WARNING | set_leverage EVAAUSDT failed: cannot set leverage [1000] gt maxLeverage [500] by risk limit (ErrCode: 110013) (ErrTime: 13:24:24).
+Request → POST https://api-demo.bybit.com/v5/position/set-leverage: {"category": "linear", "symbol": "EVAAUSDT", "buyLeverage": "10", "sellLeverage": "10"}.
+13:24:24 | INFO    | [OPP] EVAAUSDT: spread=10.2bps bid=1.1762000000000001 ask=1.1775 mid=1.1769 qty=4.3
+13:24:24 | INFO    |   -> PLACED Buy 4.3 EVAAUSDT @ 1.1762000000000001 | post_only=True reduce=False oid=2e95528d-68df-4504-a298-7133f030b2e1
+13:24:24 | INFO    |   -> PLACED Sell 4.3 EVAAUSDT @ 1.1775 | post_only=True reduce=False oid=267586c6-5a91-40ff-9704-4ace4ec5c77b
+13:24:24 | INFO    | [STATUS] equity=14.3574 avail=12.2301 pending=2 legs=0
+13:24:28 | INFO    | [FILL] LABUSDT BUY filled @ 0.298 | size=17 | hedging...
+13:24:28 | WARNING |   -> place_order FAILED Sell LABUSDT qty=17.0 px=0.299: reduce-only order has same side with current position (ErrCode: 110017) (ErrTime: 13:24:28).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "LABUSDT", "side": "Sell", "orderType": "Limit", "qty": "17.0", "price": "0.299", "timeInForce": "GTC", "reduceOnly": true}.
+13:24:29 | INFO    | [STATUS] equity=14.3574 avail=12.2301 pending=1 legs=1
+13:24:32 | INFO    | [FILL] EVAAUSDT BUY filled @ 1.1762000000000001 | size=4.3 | hedging...
+13:24:32 | INFO    |   -> PLACED Sell 4.3 EVAAUSDT @ 1.1775 | post_only=False reduce=True oid=38cc8ee6-2bef-42c8-8c83-82ebf8a07f8a
+13:24:33 | INFO    | [STATUS] equity=14.3532 avail=12.2322 pending=0 legs=2
+13:24:37 | INFO    | [STATUS] equity=14.3440 avail=12.2226 pending=0 legs=2
+13:24:40 | INFO    | Refreshing instrument metadata...
+13:24:41 | INFO    |   loaded 429 eligible instruments (BTC/ETH excluded)
+13:24:41 | INFO    | Refreshed universe (25): ['HYPEUSDT', 'LABUSDT', 'NEARUSDT', 'CLUSDT', 'BILLUSDT', 'DOGEUSDT', '1000PEPEUSDT', 'ADAUSDT', 'ALLOUSDT', 'MUUSDT']...
+13:24:42 | INFO    | [STATUS] equity=14.3585 avail=12.2391 pending=0 legs=2
+13:24:45 | INFO    | [OPP] BILLUSDT: spread=13.7bps bid=0.05099000000000001 ask=0.05106 mid=0.0510 qty=100.0
+13:24:45 | INFO    |   -> PLACED Buy 100.0 BILLUSDT @ 0.05099000000000001 | post_only=True reduce=False oid=ddf61e66-d447-4b9c-b92d-f424913c07de
+13:24:45 | INFO    |   -> PLACED Sell 100.0 BILLUSDT @ 0.05106 | post_only=True reduce=False oid=80ff9866-4b7b-4e4e-9142-7293373b5bba
+13:24:46 | INFO    | [STATUS] equity=14.3423 avail=11.7068 pending=1 legs=2
+13:24:49 | INFO    | [FILL] BILLUSDT BUY filled @ 0.05099000000000001 | size=100 | hedging...
+13:24:49 | WARNING |   -> place_order FAILED Sell BILLUSDT qty=100.0 px=0.05106: reduce-only order has same side with current position (ErrCode: 110017) (ErrTime: 13:24:49).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "BILLUSDT", "side": "Sell", "orderType": "Limit", "qty": "100.0", "price": "0.05106", "timeInForce": "GTC", "reduceOnly": true}.
+13:24:49 | INFO    | [STATUS] equity=14.3303 avail=12.2181 pending=0 legs=3
+13:24:52 | INFO    | [STATUS] equity=14.3190 avail=12.2113 pending=0 legs=3
+13:24:56 | INFO    | [STATUS] equity=14.3186 avail=12.2063 pending=0 legs=3
+13:24:59 | INFO    | [STATUS] equity=14.3186 avail=12.2063 pending=0 legs=3
+13:25:02 | INFO    | [STATUS] equity=14.2726 avail=12.1632 pending=0 legs=3
+13:25:06 | INFO    | [STATUS] equity=14.2928 avail=12.1851 pending=0 legs=3
+13:25:09 | INFO    | [STATUS] equity=14.2928 avail=12.1851 pending=0 legs=3
+13:25:12 | INFO    | Refreshing instrument metadata...
+13:25:12 | INFO    |   loaded 429 eligible instruments (BTC/ETH excluded)
+13:25:12 | INFO    | Refreshed universe (25): ['HYPEUSDT', 'LABUSDT', 'NEARUSDT', 'CLUSDT', 'BILLUSDT', 'DOGEUSDT', '1000PEPEUSDT', 'ADAUSDT', 'ALLOUSDT', 'MUUSDT']...
+13:25:12 | INFO    | [STATUS] equity=14.2739 avail=12.1590 pending=0 legs=3
+13:25:16 | INFO    | [STATUS] equity=14.2373 avail=12.1175 pending=0 legs=3
+13:25:19 | INFO    | [STATUS] equity=14.2373 avail=12.1175 pending=0 legs=3
+13:25:22 | INFO    | [STATUS] equity=14.2194 avail=12.0987 pending=0 legs=3
+13:25:25 | INFO    | [STATUS] equity=14.2237 avail=12.1044 pending=0 legs=3
+13:25:28 | INFO    | [STATUS] equity=14.2237 avail=12.1044 pending=0 legs=3
+13:25:32 | INFO    | [STATUS] equity=14.2132 avail=12.0882 pending=0 legs=3
+13:25:35 | WARNING | [STALE-HEDGE] EVAAUSDT: hedge oid=38cc8ee6-2bef-42c8-8c83-82ebf8a07f8a age=63s — consider manual review
+13:25:35 | INFO    | [STATUS] equity=14.2104 avail=12.0870 pending=0 legs=3
+13:25:37 | WARNING | Signal received — shutting down...
+13:25:38 | INFO    | Bot stopped. Open orders/positions remain — please review on Bybit DEMO UI.
+13:25:38 | INFO    | Final pending: [] | open legs: ['LABUSDT', 'EVAAUSDT', 'BILLUSDT']
+13:27:43 | INFO    | ======================================================================
+13:27:43 | INFO    | Bybit DEMO Market-Making Spread-Capture Bot
+13:27:43 | INFO    | ======================================================================
+13:27:43 | INFO    | Endpoint         : https://api-demo.bybit.com
+13:27:43 | INFO    | Excluded symbols : ['BTCUSDT', 'ETHUSDT']
+13:27:43 | INFO    | Margin per trade : 2.0% of equity
+13:27:43 | INFO    | Leverage         : 10x
+13:27:43 | INFO    | Max concurrent   : 3 symbols
+13:27:43 | INFO    | Min spread       : 8 bps
+13:27:43 | INFO    | Order timeout    : 45s
+13:27:43 | INFO    | Poll interval    : 3s
+13:27:43 | INFO    | Dry-run          : False
+13:27:43 | INFO    | Auto-min-notional: True
+13:27:43 | INFO    | Log file         : /home/z/my-project/download/bot.log
+13:27:43 | INFO    | ======================================================================
+13:27:43 | INFO    | Refreshing instrument metadata...
+13:27:43 | INFO    |   loaded 429 eligible instruments (BTC/ETH excluded)
+13:27:43 | INFO    | Initial universe (25): ['HYPEUSDT', 'LABUSDT', 'NEARUSDT', 'CLUSDT', 'BILLUSDT', 'DOGEUSDT', '1000PEPEUSDT', 'ADAUSDT', 'ALLOUSDT', 'MUUSDT', 'ENAUSDT', 'AVGOUSDT', 'DEXEUSDT', 'EVAAUSDT', 'LINKUSDT', 'AAVEUSDT', 'EWYUSDT', 'AVAXUSDT', 'ARBUSDT', 'GOOGLUSDT', 'BNBUSDT', 'FARTCOINUSDT', 'DRAMUSDT', 'LITUSDT', 'PUMPFUNUSDT']
+13:27:43 | INFO    | Starting equity: 14.2097 USDT | available: 13.0879 USDT
+13:27:43 | INFO    | Per-trade margin ~0.2842 USDT -> notional ~2.8419 USDT
+13:27:43 | WARNING | ======================================================================
+13:27:43 | WARNING | !! STRICT-2%% NOTIONAL (2.84 USDT) < EXCHANGE MIN (5.0 USDT)
+13:27:43 | WARNING | !! --auto-min-notional is ON: trades will be bumped to 5.0 USDT notional.
+13:27:43 | WARNING | !! This violates the 2%% rule — only use on small DEMO balances.
+13:27:43 | WARNING | ======================================================================
+13:27:44 | INFO    | [OPP] LABUSDT: spread=32.6bps bid=0.306 ask=0.307 mid=0.3065 qty=17.0
+13:27:44 | INFO    |   -> PLACED Buy 17.0 LABUSDT @ 0.306 | post_only=True reduce=False oid=b4958eaa-fd74-4cf3-ae29-675f39f84943
+13:27:44 | INFO    |   -> PLACED Sell 17.0 LABUSDT @ 0.307 | post_only=True reduce=False oid=d08f6405-c918-40e4-a01b-217058dcb2a5
+13:27:46 | INFO    | [STATUS] equity=14.2079 avail=13.0860 pending=1 legs=0
+13:27:49 | INFO    | [FILL] LABUSDT BUY filled @ 0.306 | size=17.0 | checking hedge...
+13:27:49 | WARNING |   -> place_order FAILED Sell LABUSDT qty=17.0 px=0.307: reduce-only order has same side with current position (ErrCode: 110017) (ErrTime: 13:27:49).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "LABUSDT", "side": "Sell", "orderType": "Limit", "qty": "17.0", "price": "0.307", "timeInForce": "GTC", "reduceOnly": true}.
+13:27:49 | ERROR   |   -> LABUSDT hedge placement FAILED — position remains OPEN!
+13:27:50 | INFO    | [OPP] AVGOUSDT: spread=8.1bps bid=395.14 ask=395.46000000000004 mid=395.3000 qty=0.02
+13:27:50 | WARNING |   -> place_order FAILED Buy AVGOUSDT qty=0.02 px=395.14: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:27:50).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "AVGOUSDT", "side": "Buy", "orderType": "Limit", "qty": "0.02", "price": "395.14", "timeInForce": "PostOnly"}.
+13:27:50 | WARNING |   -> place_order FAILED Sell AVGOUSDT qty=0.02 px=395.46000000000004: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:27:50).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "AVGOUSDT", "side": "Sell", "orderType": "Limit", "qty": "0.02", "price": "395.46000000000004", "timeInForce": "PostOnly"}.
+13:27:51 | INFO    | [STATUS] equity=14.1868 avail=13.0627 pending=0 legs=1
+13:27:54 | INFO    | [CLOSE] LABUSDT leg closed | side=Buy entry=0.306 exit=0.307 qty=17.0 closedPnl=0.0000 USDT
+13:27:54 | INFO    | [OPP] LABUSDT: spread=32.6bps bid=0.306 ask=0.307 mid=0.3065 qty=17.0
+13:27:54 | INFO    |   -> PLACED Buy 17.0 LABUSDT @ 0.306 | post_only=True reduce=False oid=fbb46579-f223-4bee-b505-95bcc7647dff
+13:27:54 | INFO    |   -> PLACED Sell 17.0 LABUSDT @ 0.307 | post_only=True reduce=False oid=ef03db31-6b89-41c5-add8-3d19321e9d2f
+13:27:54 | INFO    | [OPP] BILLUSDT: spread=9.7bps bid=0.0517 ask=0.05176000000000001 mid=0.0517 qty=100.0
+13:27:55 | INFO    |   -> PLACED Buy 100.0 BILLUSDT @ 0.0517 | post_only=True reduce=False oid=0230b9ce-edfb-40d7-bc14-e8c90e0e0468
+13:27:55 | INFO    |   -> PLACED Sell 100.0 BILLUSDT @ 0.05176000000000001 | post_only=True reduce=False oid=c04e7658-c368-45ec-9976-c3245c8e8def
+13:27:55 | INFO    | [STATUS] equity=14.2032 avail=13.5991 pending=2 legs=0
+13:27:59 | INFO    |   BILLUSDT: both legs gone, no position — clear pending
+13:28:00 | INFO    | [STATUS] equity=14.2032 avail=13.5991 pending=1 legs=0
+13:28:04 | INFO    | [STATUS] equity=14.2046 avail=13.6059 pending=1 legs=0
+13:28:07 | INFO    | [FILL] LABUSDT BUY filled @ 0.306 | size=17.0 | checking hedge...
+13:28:07 | INFO    |   -> PLACED Sell 17.0 LABUSDT @ 0.307 | post_only=False reduce=True oid=d783a22e-5d8c-4508-bfd6-7c7b1d4f9f1a
+13:28:08 | INFO    | [OPP] AVGOUSDT: spread=9.4bps bid=394.51 ask=394.88 mid=394.6950 qty=0.02
+13:28:08 | WARNING |   -> place_order FAILED Buy AVGOUSDT qty=0.02 px=394.51: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:28:08).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "AVGOUSDT", "side": "Buy", "orderType": "Limit", "qty": "0.02", "price": "394.51", "timeInForce": "PostOnly"}.
+13:28:08 | WARNING |   -> place_order FAILED Sell AVGOUSDT qty=0.02 px=394.88: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:28:08).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "AVGOUSDT", "side": "Sell", "orderType": "Limit", "qty": "0.02", "price": "394.88", "timeInForce": "PostOnly"}.
+13:28:08 | INFO    | [STATUS] equity=14.2121 avail=14.1384 pending=0 legs=1
+13:28:11 | INFO    | [CLOSE] LABUSDT leg closed | side=Buy entry=0.306 exit=0.307 qty=17.0 closedPnl=0.0000 USDT
+13:28:12 | INFO    | [OPP] LABUSDT: spread=32.6bps bid=0.306 ask=0.307 mid=0.3065 qty=17.0
+13:28:12 | INFO    |   -> PLACED Buy 17.0 LABUSDT @ 0.306 | post_only=True reduce=False oid=48d5e2bf-8dca-44a8-9bdc-35cc2e6d8a1a
+13:28:12 | INFO    |   -> PLACED Sell 17.0 LABUSDT @ 0.307 | post_only=True reduce=False oid=0d660cee-3b0c-4108-a6ce-f079a4be31d8
+13:28:13 | INFO    | [STATUS] equity=14.2133 avail=13.6028 pending=1 legs=0
+13:28:16 | INFO    | Refreshing instrument metadata...
+13:28:16 | INFO    |   loaded 429 eligible instruments (BTC/ETH excluded)
+13:28:16 | INFO    | Refreshed universe (25): ['HYPEUSDT', 'LABUSDT', 'NEARUSDT', 'CLUSDT', 'BILLUSDT', 'DOGEUSDT', '1000PEPEUSDT', 'ADAUSDT', 'ALLOUSDT', 'MUUSDT']...
+13:28:16 | INFO    | [FILL] LABUSDT BUY filled @ 0.306 | size=17.0 | checking hedge...
+13:28:16 | INFO    |   -> PLACED Sell 17.0 LABUSDT @ 0.307 | post_only=False reduce=True oid=664adf90-12ed-45b3-b93a-03f77685e594
+13:28:17 | INFO    | [OPP] AVGOUSDT: spread=9.1bps bid=394.41 ask=394.77 mid=394.5900 qty=0.02
+13:28:17 | WARNING |   -> place_order FAILED Buy AVGOUSDT qty=0.02 px=394.41: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:28:17).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "AVGOUSDT", "side": "Buy", "orderType": "Limit", "qty": "0.02", "price": "394.41", "timeInForce": "PostOnly"}.
+13:28:17 | WARNING |   -> place_order FAILED Sell AVGOUSDT qty=0.02 px=394.77: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:28:17).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "AVGOUSDT", "side": "Sell", "orderType": "Limit", "qty": "0.02", "price": "394.77", "timeInForce": "PostOnly"}.
+13:28:18 | INFO    | [STATUS] equity=14.2256 avail=14.1520 pending=0 legs=1
+13:28:21 | INFO    | [CLOSE] LABUSDT leg closed | side=Buy entry=0.306 exit=0.307 qty=17.0 closedPnl=0.0000 USDT
+13:28:21 | INFO    | [OPP] LABUSDT: spread=32.6bps bid=0.306 ask=0.307 mid=0.3065 qty=17.0
+13:28:21 | INFO    |   -> PLACED Buy 17.0 LABUSDT @ 0.306 | post_only=True reduce=False oid=32b234e3-9838-4c15-9855-471f7c47f328
+13:28:21 | INFO    |   -> PLACED Sell 17.0 LABUSDT @ 0.307 | post_only=True reduce=False oid=38e74404-b569-48cb-b81f-a929a02c165f
+13:28:22 | INFO    | [STATUS] equity=14.2258 avail=13.6187 pending=1 legs=0
+13:28:25 | INFO    | [FILL] LABUSDT BUY filled @ 0.306 | size=17.0 | checking hedge...
+13:28:25 | WARNING |   -> place_order FAILED Sell LABUSDT qty=17.0 px=0.307: reduce-only order has same side with current position (ErrCode: 110017) (ErrTime: 13:28:25).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "LABUSDT", "side": "Sell", "orderType": "Limit", "qty": "17.0", "price": "0.307", "timeInForce": "GTC", "reduceOnly": true}.
+13:28:25 | ERROR   |   -> LABUSDT hedge placement FAILED — position remains OPEN!
+13:28:26 | INFO    | [OPP] AVGOUSDT: spread=10.6bps bid=394.16 ask=394.58 mid=394.3700 qty=0.02
+13:28:26 | WARNING |   -> place_order FAILED Buy AVGOUSDT qty=0.02 px=394.16: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:28:26).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "AVGOUSDT", "side": "Buy", "orderType": "Limit", "qty": "0.02", "price": "394.16", "timeInForce": "PostOnly"}.
+13:28:26 | WARNING |   -> place_order FAILED Sell AVGOUSDT qty=0.02 px=394.58: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:28:26).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "AVGOUSDT", "side": "Sell", "orderType": "Limit", "qty": "0.02", "price": "394.58", "timeInForce": "PostOnly"}.
+13:28:26 | INFO    | [STATUS] equity=14.2297 avail=13.6292 pending=0 legs=1
+13:28:31 | INFO    | [STATUS] equity=14.2297 avail=13.6292 pending=0 legs=1
+13:28:34 | INFO    | [OPP] AVGOUSDT: spread=10.6bps bid=394.42 ask=394.84000000000003 mid=394.6300 qty=0.02
+13:28:34 | WARNING |   -> place_order FAILED Buy AVGOUSDT qty=0.02 px=394.42: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:28:34).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "AVGOUSDT", "side": "Buy", "orderType": "Limit", "qty": "0.02", "price": "394.42", "timeInForce": "PostOnly"}.
+13:28:34 | WARNING |   -> place_order FAILED Sell AVGOUSDT qty=0.02 px=394.84000000000003: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:28:34).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "AVGOUSDT", "side": "Sell", "orderType": "Limit", "qty": "0.02", "price": "394.84000000000003", "timeInForce": "PostOnly"}.
+13:28:35 | INFO    | [STATUS] equity=14.2333 avail=13.6331 pending=0 legs=1
+13:28:39 | INFO    | [OPP] AVGOUSDT: spread=11.9bps bid=394.42 ask=394.89 mid=394.6550 qty=0.02
+13:28:39 | WARNING |   -> place_order FAILED Buy AVGOUSDT qty=0.02 px=394.42: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:28:39).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "AVGOUSDT", "side": "Buy", "orderType": "Limit", "qty": "0.02", "price": "394.42", "timeInForce": "PostOnly"}.
+13:28:39 | WARNING |   -> place_order FAILED Sell AVGOUSDT qty=0.02 px=394.89: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:28:39).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "AVGOUSDT", "side": "Sell", "orderType": "Limit", "qty": "0.02", "price": "394.89", "timeInForce": "PostOnly"}.
+13:28:39 | INFO    | [STATUS] equity=14.2246 avail=13.6234 pending=0 legs=1
+13:28:43 | INFO    | [OPP] AVGOUSDT: spread=10.9bps bid=394.49 ask=394.92 mid=394.7050 qty=0.02
+13:28:43 | WARNING |   -> place_order FAILED Buy AVGOUSDT qty=0.02 px=394.49: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:28:43).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "AVGOUSDT", "side": "Buy", "orderType": "Limit", "qty": "0.02", "price": "394.49", "timeInForce": "PostOnly"}.
+13:28:43 | WARNING |   -> place_order FAILED Sell AVGOUSDT qty=0.02 px=394.92: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:28:43).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "AVGOUSDT", "side": "Sell", "orderType": "Limit", "qty": "0.02", "price": "394.92", "timeInForce": "PostOnly"}.
+13:28:44 | INFO    | [STATUS] equity=14.2323 avail=13.6317 pending=0 legs=1
+13:28:47 | INFO    | Refreshing instrument metadata...
+13:28:47 | INFO    |   loaded 429 eligible instruments (BTC/ETH excluded)
+13:28:47 | INFO    | Refreshed universe (25): ['HYPEUSDT', 'LABUSDT', 'NEARUSDT', 'CLUSDT', 'BILLUSDT', 'DOGEUSDT', '1000PEPEUSDT', 'ADAUSDT', 'ALLOUSDT', 'MUUSDT']...
+13:28:48 | INFO    | [OPP] AVGOUSDT: spread=10.6bps bid=394.82 ask=395.24 mid=395.0300 qty=0.02
+13:28:48 | WARNING |   -> place_order FAILED Buy AVGOUSDT qty=0.02 px=394.82: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:28:48).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "AVGOUSDT", "side": "Buy", "orderType": "Limit", "qty": "0.02", "price": "394.82", "timeInForce": "PostOnly"}.
+13:28:48 | WARNING |   -> place_order FAILED Sell AVGOUSDT qty=0.02 px=395.24: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:28:48).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "AVGOUSDT", "side": "Sell", "orderType": "Limit", "qty": "0.02", "price": "395.24", "timeInForce": "PostOnly"}.
+13:28:48 | INFO    | [STATUS] equity=14.2358 avail=13.6357 pending=0 legs=1
+13:28:52 | INFO    | [OPP] AVGOUSDT: spread=10.6bps bid=394.65000000000003 ask=395.07 mid=394.8600 qty=0.02
+13:28:52 | WARNING |   -> place_order FAILED Buy AVGOUSDT qty=0.02 px=394.65000000000003: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:28:52).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "AVGOUSDT", "side": "Buy", "orderType": "Limit", "qty": "0.02", "price": "394.65000000000003", "timeInForce": "PostOnly"}.
+13:28:52 | WARNING |   -> place_order FAILED Sell AVGOUSDT qty=0.02 px=395.07: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:28:52).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "AVGOUSDT", "side": "Sell", "orderType": "Limit", "qty": "0.02", "price": "395.07", "timeInForce": "PostOnly"}.
+13:28:53 | INFO    | [STATUS] equity=14.2510 avail=13.6524 pending=0 legs=1
+13:28:56 | INFO    | [OPP] BILLUSDT: spread=9.7bps bid=0.05154 ask=0.05158 mid=0.0516 qty=100.0
+13:28:56 | INFO    |   -> PLACED Buy 100.0 BILLUSDT @ 0.05154 | post_only=True reduce=False oid=fee0877f-f9ed-4bce-ba2f-69d4b1737b2e
+13:28:56 | INFO    |   -> PLACED Sell 100.0 BILLUSDT @ 0.05158 | post_only=True reduce=False oid=032a82ae-6f31-4f94-b810-45365d530d69
+13:28:57 | INFO    | [OPP] AVGOUSDT: spread=10.6bps bid=394.65000000000003 ask=395.07 mid=394.8600 qty=0.02
+13:28:57 | WARNING |   -> place_order FAILED Buy AVGOUSDT qty=0.02 px=394.65000000000003: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:28:57).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "AVGOUSDT", "side": "Buy", "orderType": "Limit", "qty": "0.02", "price": "394.65000000000003", "timeInForce": "PostOnly"}.
+13:28:57 | WARNING |   -> place_order FAILED Sell AVGOUSDT qty=0.02 px=395.07: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:28:57).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "AVGOUSDT", "side": "Sell", "orderType": "Limit", "qty": "0.02", "price": "395.07", "timeInForce": "PostOnly"}.
+13:28:57 | INFO    | [STATUS] equity=14.2566 avail=13.1304 pending=1 legs=1
+13:28:58 | WARNING | Signal received — shutting down...
+13:29:00 | INFO    | Bot stopped. Open orders/positions remain — please review on Bybit DEMO UI.
+13:29:00 | INFO    | Final pending: ['BILLUSDT'] | open legs: ['LABUSDT']
+13:30:36 | INFO    | ======================================================================
+13:30:36 | INFO    | Bybit DEMO Market-Making Spread-Capture Bot
+13:30:36 | INFO    | ======================================================================
+13:30:36 | INFO    | Endpoint         : https://api-demo.bybit.com
+13:30:36 | INFO    | Excluded symbols : ['BTCUSDT', 'ETHUSDT']
+13:30:36 | INFO    | Margin per trade : 2.0% of equity
+13:30:36 | INFO    | Leverage         : 10x
+13:30:36 | INFO    | Max concurrent   : 3 symbols
+13:30:36 | INFO    | Min spread       : 8 bps
+13:30:36 | INFO    | Order timeout    : 45s
+13:30:36 | INFO    | Poll interval    : 3s
+13:30:36 | INFO    | Dry-run          : False
+13:30:36 | INFO    | Auto-min-notional: False
+13:30:36 | INFO    | Log file         : /home/z/my-project/download/bot.log
+13:30:36 | INFO    | ======================================================================
+13:30:36 | INFO    | === CLEANUP MODE ===
+13:30:36 | INFO    | [CLEANUP] Cancelling all open orders...
+13:30:36 | WARNING |   cancel_all_orders failed: params error (ErrCode: 10001) (ErrTime: 13:30:36).
+Request → POST https://api-demo.bybit.com/v5/order/cancel-all: {"category": "linear"}.
+13:30:36 | WARNING |   close BILLUSDT failed: reduce-only order has same side with current position (ErrCode: 110017) (ErrTime: 13:30:36).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "BILLUSDT", "side": "Sell", "orderType": "Market", "qty": "100.0", "reduceOnly": true}.
+13:30:37 | WARNING |   close LABUSDT failed: reduce-only order has same side with current position (ErrCode: 110017) (ErrTime: 13:30:37).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "LABUSDT", "side": "Sell", "orderType": "Market", "qty": "17.0", "reduceOnly": true}.
+13:30:37 | INFO    | [CLEANUP] done.
+13:31:46 | INFO    | ======================================================================
+13:31:46 | INFO    | Bybit DEMO Market-Making Spread-Capture Bot
+13:31:46 | INFO    | ======================================================================
+13:31:46 | INFO    | Endpoint         : https://api-demo.bybit.com
+13:31:46 | INFO    | Excluded symbols : ['BTCUSDT', 'ETHUSDT']
+13:31:46 | INFO    | Margin per trade : 2.0% of equity
+13:31:46 | INFO    | Leverage         : 10x
+13:31:46 | INFO    | Max concurrent   : 3 symbols
+13:31:46 | INFO    | Min spread       : 8 bps
+13:31:46 | INFO    | Order timeout    : 45s
+13:31:46 | INFO    | Poll interval    : 3s
+13:31:46 | INFO    | Dry-run          : False
+13:31:46 | INFO    | Auto-min-notional: False
+13:31:46 | INFO    | Log file         : /home/z/my-project/download/bot.log
+13:31:46 | INFO    | ======================================================================
+13:31:46 | INFO    | === CLEANUP MODE ===
+13:31:46 | INFO    | [CLEANUP] Cancelling all open orders...
+13:31:46 | INFO    |   cancel_all_orders OK
+13:31:46 | INFO    |   closed BILLUSDT (Buy 100.0)
+13:31:46 | INFO    |   closed LABUSDT (Buy 17.0)
+13:31:46 | INFO    | [CLEANUP] done.
+13:31:58 | INFO    | ======================================================================
+13:31:58 | INFO    | Bybit DEMO Market-Making Spread-Capture Bot
+13:31:58 | INFO    | ======================================================================
+13:31:58 | INFO    | Endpoint         : https://api-demo.bybit.com
+13:31:58 | INFO    | Excluded symbols : ['BTCUSDT', 'ETHUSDT']
+13:31:58 | INFO    | Margin per trade : 2.0% of equity
+13:31:58 | INFO    | Leverage         : 10x
+13:31:58 | INFO    | Max concurrent   : 3 symbols
+13:31:58 | INFO    | Min spread       : 8 bps
+13:31:58 | INFO    | Order timeout    : 45s
+13:31:58 | INFO    | Poll interval    : 3s
+13:31:58 | INFO    | Dry-run          : False
+13:31:58 | INFO    | Auto-min-notional: True
+13:31:58 | INFO    | Log file         : /home/z/my-project/download/bot.log
+13:31:58 | INFO    | ======================================================================
+13:31:58 | INFO    | Refreshing instrument metadata...
+13:31:58 | INFO    |   loaded 429 eligible instruments (BTC/ETH excluded)
+13:31:58 | INFO    | Initial universe (25): ['HYPEUSDT', 'LABUSDT', 'NEARUSDT', 'CLUSDT', 'BILLUSDT', 'DOGEUSDT', '1000PEPEUSDT', 'ADAUSDT', 'ALLOUSDT', 'MUUSDT', 'ENAUSDT', 'AVGOUSDT', 'DEXEUSDT', 'EVAAUSDT', 'LINKUSDT', 'AAVEUSDT', 'EWYUSDT', 'AVAXUSDT', 'ARBUSDT', 'GOOGLUSDT', 'BNBUSDT', 'FARTCOINUSDT', 'DRAMUSDT', 'LITUSDT', 'PUMPFUNUSDT']
+13:31:58 | INFO    | Starting equity: 14.0614 USDT | available: 13.9877 USDT
+13:31:58 | INFO    | Per-trade margin ~0.2812 USDT -> notional ~2.8123 USDT
+13:31:58 | WARNING | ======================================================================
+13:31:58 | WARNING | !! STRICT-2%% NOTIONAL (2.81 USDT) < EXCHANGE MIN (5.0 USDT)
+13:31:58 | WARNING | !! --auto-min-notional is ON: trades will be bumped to 5.0 USDT notional.
+13:31:58 | WARNING | !! This violates the 2%% rule — only use on small DEMO balances.
+13:31:58 | WARNING | ======================================================================
+13:31:58 | INFO    | [OPP] LABUSDT: spread=32.4bps bid=0.308 ask=0.309 mid=0.3085 qty=17.0
+13:31:58 | INFO    |   -> PLACED Buy 17.0 LABUSDT @ 0.308 | post_only=True reduce=False oid=47e339da-741c-45ad-abf1-f13628385e8c
+13:31:58 | INFO    |   -> PLACED Sell 17.0 LABUSDT @ 0.309 | post_only=True reduce=False oid=bf778a29-1ee9-4fe0-8ae2-1f7ef6e65d54
+13:32:00 | INFO    | [STATUS] equity=14.0617 avail=13.4539 pending=1 legs=0
+13:32:03 | INFO    | [FILL] LABUSDT BUY filled @ 0.308 | size=17.0 | checking hedge...
+13:32:03 | INFO    |   -> PLACED Sell 17.0 LABUSDT @ 0.309 | post_only=False reduce=True oid=a699f73e-e050-4653-944b-142aa31b9bbe
+13:32:04 | INFO    | [OPP] AVGOUSDT: spread=10.8bps bid=390.19 ask=390.61 mid=390.4000 qty=0.02
+13:32:04 | WARNING |   [RUNTIME-EXCLUDE] AVGOUSDT (agreement required (tokenized stock)) — won't try again this session
+13:32:04 | WARNING |   -> place_order FAILED Buy AVGOUSDT qty=0.02 px=390.19: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:32:04).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "AVGOUSDT", "side": "Buy", "orderType": "Limit", "qty": "0.02", "price": "390.19", "timeInForce": "PostOnly"}.
+13:32:04 | WARNING |   -> place_order FAILED Sell AVGOUSDT qty=0.02 px=390.61: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:32:04).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "AVGOUSDT", "side": "Sell", "orderType": "Limit", "qty": "0.02", "price": "390.61", "timeInForce": "PostOnly"}.
+13:32:04 | INFO    | [STATUS] equity=14.0562 avail=13.4544 pending=0 legs=1
+13:32:08 | INFO    | [CLOSE] LABUSDT leg closed | side=Buy entry=0.308 exit=0.309 qty=17.0 closedPnl=0.0000 USDT
+13:32:08 | INFO    | [OPP] LABUSDT: spread=32.5bps bid=0.307 ask=0.308 mid=0.3075 qty=17.0
+13:32:08 | INFO    |   -> PLACED Buy 17.0 LABUSDT @ 0.307 | post_only=True reduce=False oid=af350146-3a38-468c-88de-1e9d2a9aee92
+13:32:08 | INFO    |   -> PLACED Sell 17.0 LABUSDT @ 0.308 | post_only=True reduce=False oid=7d71dc84-075f-44fe-badf-3e2d7b3b524b
+13:32:09 | INFO    | [STATUS] equity=14.0745 avail=13.4655 pending=1 legs=0
+13:32:13 | INFO    | [STATUS] equity=14.0754 avail=13.4665 pending=1 legs=0
+13:32:17 | INFO    | [STATUS] equity=14.0754 avail=13.4665 pending=1 legs=0
+13:32:21 | WARNING | set_leverage EVAAUSDT failed: cannot set leverage [1000] gt maxLeverage [500] by risk limit (ErrCode: 110013) (ErrTime: 13:32:21).
+Request → POST https://api-demo.bybit.com/v5/position/set-leverage: {"category": "linear", "symbol": "EVAAUSDT", "buyLeverage": "10", "sellLeverage": "10"}.
+13:32:21 | INFO    | [OPP] EVAAUSDT: spread=9.7bps bid=1.1373 ask=1.1384 mid=1.1379 qty=4.4
+13:32:21 | INFO    |   -> PLACED Buy 4.4 EVAAUSDT @ 1.1373 | post_only=True reduce=False oid=1d358555-bcc5-454a-97f1-cc4705b653a8
+13:32:21 | INFO    |   -> PLACED Sell 4.4 EVAAUSDT @ 1.1384 | post_only=True reduce=False oid=bb70719d-7c95-4a0f-810e-215442947d09
+13:32:21 | INFO    | [STATUS] equity=14.0819 avail=12.4669 pending=2 legs=0
+13:32:25 | INFO    |   EVAAUSDT: both legs gone, no position — clear pending
+13:32:25 | WARNING | set_leverage EVAAUSDT failed: cannot set leverage [1000] gt maxLeverage [500] by risk limit (ErrCode: 110013) (ErrTime: 13:32:25).
+Request → POST https://api-demo.bybit.com/v5/position/set-leverage: {"category": "linear", "symbol": "EVAAUSDT", "buyLeverage": "10", "sellLeverage": "10"}.
+13:32:25 | INFO    | [OPP] EVAAUSDT: spread=9.6bps bid=1.1402 ask=1.1413 mid=1.1408 qty=4.4
+13:32:25 | INFO    |   -> PLACED Buy 4.4 EVAAUSDT @ 1.1402 | post_only=True reduce=False oid=789ab950-c6a8-434d-837f-f44c8e83457c
+13:32:25 | INFO    |   -> PLACED Sell 4.4 EVAAUSDT @ 1.1413 | post_only=True reduce=False oid=3c3d152a-a8ab-4edd-87c0-8445394c71c0
+13:32:26 | INFO    | [STATUS] equity=14.0749 avail=12.4458 pending=2 legs=0
+13:32:29 | INFO    | Refreshing instrument metadata...
+13:32:29 | INFO    |   loaded 429 eligible instruments (BTC/ETH excluded)
+13:32:29 | INFO    | Refreshed universe (25): ['HYPEUSDT', 'LABUSDT', 'NEARUSDT', 'CLUSDT', 'BILLUSDT', 'DOGEUSDT', '1000PEPEUSDT', 'ADAUSDT', 'ALLOUSDT', 'MUUSDT']...
+13:32:29 | INFO    | [FILL] EVAAUSDT BUY filled @ 1.1402 | size=4.4 | checking hedge...
+13:32:29 | INFO    |   -> EVAAUSDT SELL leg still live (oid=3c3d152a-a8ab-4edd-87c0-8445394c71c0) — will close position naturally when it fills
+13:32:30 | INFO    | [STATUS] equity=14.0668 avail=12.4524 pending=1 legs=1
+13:32:34 | INFO    | [STATUS] equity=14.0656 avail=12.4515 pending=1 legs=1
+13:32:38 | INFO    | [OPP] GOOGLUSDT: spread=8.5bps bid=354.22 ask=354.52 mid=354.3700 qty=0.02
+13:32:38 | WARNING |   [RUNTIME-EXCLUDE] GOOGLUSDT (agreement required (tokenized stock)) — won't try again this session
+13:32:38 | WARNING |   -> place_order FAILED Buy GOOGLUSDT qty=0.02 px=354.22: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:32:38).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "GOOGLUSDT", "side": "Buy", "orderType": "Limit", "qty": "0.02", "price": "354.22", "timeInForce": "PostOnly"}.
+13:32:38 | WARNING |   -> place_order FAILED Sell GOOGLUSDT qty=0.02 px=354.52: You must sign the required agreement before trading this contract. (ErrCode: 110126) (ErrTime: 13:32:38).
+Request → POST https://api-demo.bybit.com/v5/order/create: {"category": "linear", "symbol": "GOOGLUSDT", "side": "Sell", "orderType": "Limit", "qty": "0.02", "price": "354.52", "timeInForce": "PostOnly"}.
+13:32:38 | INFO    | [STATUS] equity=14.0643 avail=12.4504 pending=1 legs=1
+13:32:42 | INFO    | [CLOSE] EVAAUSDT leg closed | side=Buy entry=1.1402 exit=1.1413 qty=4.4 closedPnl=0.0000 USDT
+13:32:43 | INFO    | [STATUS] equity=14.0756 avail=13.4668 pending=1 legs=0
+13:32:47 | INFO    | [STATUS] equity=14.0752 avail=13.4663 pending=1 legs=0
+13:32:51 | INFO    | [STATUS] equity=14.0762 avail=13.4674 pending=1 legs=0
+13:32:54 | INFO    | [TIMEOUT] LABUSDT no fill in 45s — cancelling both legs
+13:32:54 | INFO    | [OPP] LABUSDT: spread=32.7bps bid=0.305 ask=0.306 mid=0.3055 qty=17.0
+13:32:54 | INFO    |   -> PLACED Buy 17.0 LABUSDT @ 0.305 | post_only=True reduce=False oid=3a0cfbd8-b3f3-41ca-b2b8-a042be5f1e15
+13:32:54 | INFO    |   -> PLACED Sell 17.0 LABUSDT @ 0.306 | post_only=True reduce=False oid=8671af2d-6a71-4164-92cf-497ee42e617b
+13:32:55 | INFO    | [STATUS] equity=14.0751 avail=13.4698 pending=1 legs=0
+13:32:58 | INFO    | [FILL] LABUSDT SELL filled @ 0.306 | size=17.0 | checking hedge...
+13:32:58 | INFO    |   -> PLACED Buy 17.0 LABUSDT @ 0.305 | post_only=False reduce=True oid=ac561253-1549-4bda-8929-259f0b8a3766
+13:32:59 | INFO    | [STATUS] equity=14.0470 avail=13.4448 pending=0 legs=1
+13:33:02 | INFO    | Refreshing instrument metadata...
+13:33:02 | INFO    |   loaded 429 eligible instruments (BTC/ETH excluded)
+13:33:03 | INFO    | Refreshed universe (25): ['HYPEUSDT', 'LABUSDT', 'NEARUSDT', 'CLUSDT', 'BILLUSDT', 'DOGEUSDT', '1000PEPEUSDT', 'ADAUSDT', 'ALLOUSDT', 'MUUSDT']...
+13:33:03 | INFO    | [OPP] BILLUSDT: spread=20.7bps bid=0.05301 ask=0.05312000000000001 mid=0.0531 qty=100.0
+13:33:03 | INFO    |   -> PLACED Buy 100.0 BILLUSDT @ 0.05301 | post_only=True reduce=False oid=bc76f2a7-b26c-4a12-ad73-e1e6246c8017
+13:33:03 | INFO    |   -> PLACED Sell 100.0 BILLUSDT @ 0.05312000000000001 | post_only=True reduce=False oid=167e2fbc-c2c6-4562-b65d-fd458211b1b3
+13:33:04 | INFO    | [STATUS] equity=14.0388 avail=12.9067 pending=1 legs=1
+13:33:07 | INFO    | [FILL] BILLUSDT BUY filled @ 0.05301 | size=100.0 | checking hedge...
+13:33:07 | INFO    |   -> PLACED Sell 100.0 BILLUSDT @ 0.05312000000000001 | post_only=False reduce=True oid=1e527e80-0aa1-4b3c-afd9-26e605d0d23f
+13:33:07 | INFO    | [CLOSE] LABUSDT leg closed | side=Sell entry=0.306 exit=0.305 qty=17.0 closedPnl=0.0000 USDT
+13:33:07 | INFO    | [OPP] LABUSDT: spread=32.7bps bid=0.305 ask=0.306 mid=0.3055 qty=17.0
+13:33:07 | INFO    |   -> PLACED Buy 17.0 LABUSDT @ 0.305 | post_only=True reduce=False oid=7bec1c09-2acd-449f-ad2b-2a73837b7157
+13:33:07 | INFO    |   -> PLACED Sell 17.0 LABUSDT @ 0.306 | post_only=True reduce=False oid=97f1eec6-f485-46ed-bfbc-c8293f133a97
+13:33:08 | INFO    | [STATUS] equity=14.0752 avail=12.9433 pending=1 legs=1
+13:33:11 | INFO    | [FILL] LABUSDT SELL filled @ 0.306 | size=17.0 | checking hedge...
+13:33:12 | INFO    |   -> PLACED Buy 17.0 LABUSDT @ 0.305 | post_only=False reduce=True oid=1ef47d7f-6c0c-40e7-9c9e-9f7a62fef73e
+13:33:12 | INFO    | [STATUS] equity=14.0744 avail=13.4680 pending=0 legs=2
+13:33:16 | INFO    | [CLOSE] LABUSDT leg closed | side=Sell entry=0.306 exit=0.305 qty=17.0 closedPnl=0.0000 USDT
+13:33:16 | INFO    | [OPP] LABUSDT: spread=32.6bps bid=0.306 ask=0.307 mid=0.3065 qty=17.0
+13:33:16 | INFO    |   -> PLACED Buy 17.0 LABUSDT @ 0.306 | post_only=True reduce=False oid=57efbb9d-325f-480a-8c52-2acf09339732
+13:33:16 | INFO    |   -> PLACED Sell 17.0 LABUSDT @ 0.307 | post_only=True reduce=False oid=c6e71a0b-a8d7-4d2f-9fd9-99318428c0d5
+13:33:17 | INFO    | [STATUS] equity=14.0929 avail=12.9603 pending=1 legs=1
+13:33:20 | INFO    | [FILL] LABUSDT SELL filled @ 0.307 | size=17.0 | checking hedge...
+13:33:20 | INFO    |   -> PLACED Buy 17.0 LABUSDT @ 0.306 | post_only=False reduce=True oid=60e1aaa4-820f-47db-a93c-9894df281143
+13:33:21 | INFO    | [STATUS] equity=14.1066 avail=13.4996 pending=0 legs=2
+13:33:24 | INFO    | [CLOSE] LABUSDT leg closed | side=Sell entry=0.307 exit=0.306 qty=17.0 closedPnl=0.0000 USDT
+13:33:24 | INFO    | [OPP] LABUSDT: spread=32.7bps bid=0.305 ask=0.306 mid=0.3055 qty=17.0
+13:33:24 | INFO    |   -> PLACED Buy 17.0 LABUSDT @ 0.305 | post_only=True reduce=False oid=46a380b2-1a84-463a-ab51-0b226c6b417b
+13:33:24 | INFO    |   -> PLACED Sell 17.0 LABUSDT @ 0.306 | post_only=True reduce=False oid=0cb865e5-61fc-4a33-8e3c-40e2d7daab5c
+13:33:25 | INFO    | [STATUS] equity=14.0999 avail=12.9703 pending=1 legs=1
+13:33:28 | INFO    | [FILL] LABUSDT BUY filled @ 0.305 | size=17.0 | checking hedge...
+13:33:28 | INFO    |   -> PLACED Sell 17.0 LABUSDT @ 0.306 | post_only=False reduce=True oid=383e374c-f0a1-4304-ac94-c7de37e97bdd
+13:33:29 | INFO    | [STATUS] equity=14.1199 avail=13.5126 pending=0 legs=2
+13:33:32 | WARNING | Signal received — shutting down...
+13:33:32 | INFO    | Bot stopped. Open orders/positions remain — please review on Bybit DEMO UI.
+13:33:32 | INFO    | Final pending: [] | open legs: ['BILLUSDT', 'LABUSDT']
+13:34:09 | INFO    | ======================================================================
+13:34:09 | INFO    | Bybit DEMO Market-Making Spread-Capture Bot
+13:34:09 | INFO    | ======================================================================
+13:34:09 | INFO    | Endpoint         : https://api-demo.bybit.com
+13:34:09 | INFO    | Excluded symbols : ['BTCUSDT', 'ETHUSDT']
+13:34:09 | INFO    | Margin per trade : 2.0% of equity
+13:34:09 | INFO    | Leverage         : 10x
+13:34:09 | INFO    | Max concurrent   : 3 symbols
+13:34:09 | INFO    | Min spread       : 8 bps
+13:34:09 | INFO    | Order timeout    : 45s
+13:34:09 | INFO    | Poll interval    : 3s
+13:34:09 | INFO    | Dry-run          : False
+13:34:09 | INFO    | Auto-min-notional: False
+13:34:09 | INFO    | Log file         : /home/z/my-project/download/bot.log
+13:34:09 | INFO    | ======================================================================
+13:34:09 | INFO    | === CLEANUP MODE ===
+13:34:09 | INFO    | [CLEANUP] Cancelling all open orders...
+13:34:09 | INFO    |   cancel_all_orders OK
+13:34:09 | INFO    | [CLEANUP] done.
