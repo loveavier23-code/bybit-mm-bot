@@ -17,9 +17,10 @@ import { createHmac } from "node:crypto";
 // ============================================================================
 // CONFIG
 // ============================================================================
-const API_KEY = "YOUR_BYBIT_API_KEY";
-const API_SECRET = "YOUR_BYBIT_API_SECRET";
-const BASE_URL = "https://api-demo.bybit.com";
+// API keys can come from env vars (preferred for prod) or fall back to demo defaults
+const API_KEY = process.env.BYBIT_API_KEY || "YOUR_BYBIT_API_KEY";
+const API_SECRET = process.env.BYBIT_API_SECRET || "YOUR_BYBIT_API_SECRET";
+const BASE_URL = process.env.BYBIT_BASE_URL || "https://api-demo.bybit.com";
 const CATEGORY = "linear";
 const QUOTE_COIN = "USDT";
 const EXCLUDED_SYMBOLS = new Set(["BTCUSDT", "ETHUSDT"]);
@@ -37,6 +38,11 @@ export const botConfig = {
   symbol_universe_size: 25,
   auto_min_notional: true,
   min_notional_usdt: 5,
+  // Smart stop-loss params
+  hedge_timeout_sec: 20,        // if hedge doesn't fill in N sec, market-close
+  max_adverse_bps: 15,          // if unrealised loss > N bps, market-close immediately
+  reprice_hedge: true,          // re-price hedge to current best opposite price instead of stale original
+  verify_spread_at_fill: true,  // abort cycle (market-close) if spread dropped below min_spread_bps at fill time
 };
 
 // ============================================================================
@@ -350,6 +356,16 @@ const equity_history: any[] = [];
 const trade_history: any[] = [];
 let last_legs_snapshot: Map<string, any> = new Map();
 
+// Session stats (reset on dev server restart)
+let session_stats = {
+  total_cycles: 0,         // completed MM cycles (both legs filled)
+  winning_cycles: 0,       // cycles that captured positive spread
+  losing_cycles: 0,        // cycles that lost money (hedge slipped adverse)
+  total_realized_pnl: 0,   // sum of cycle PnLs in USDT
+  total_fees_paid: 0,      // estimate (not tracked precisely on demo)
+  session_start_ts: Date.now() / 1000,
+};
+
 // ============================================================================
 // BOT LOGIC
 // ============================================================================
@@ -448,6 +464,29 @@ async function onBuyFilled(pp: PendingPair, pos: any): Promise<void> {
     return;
   }
 
+  // === SPREAD RE-VERIFICATION (fix for sub-threshold trades) ===
+  // Fetch current quote. If spread has collapsed below min_spread_bps, the
+  // passive hedge at the original ask will likely never fill (or fill very
+  // late). Better to market-close now and accept a tiny loss than hold risk.
+  if (botConfig.verify_spread_at_fill) {
+    const q = await getQuote(pp.symbol, 5);
+    if (q) {
+      const current_spread_bps = q.spread_bps;
+      const adverse_move_bps = ((q.ask - pp.buy_price) / pp.buy_price) * 10000;
+      botLog("INFO", `  -> ${pp.symbol} current spread=${current_spread_bps.toFixed(1)}bps, ask moved ${adverse_move_bps >= 0 ? "+" : ""}${adverse_move_bps.toFixed(1)}bps from entry`);
+      if (current_spread_bps < botConfig.min_spread_bps && !sell_live) {
+        // Spread collapsed. If the SELL leg is also gone, we have no natural hedge.
+        // Market-close immediately to avoid holding an unhedged position.
+        botLog("WARNING", `  -> ${pp.symbol} SPREAD COLLAPSED to ${current_spread_bps.toFixed(1)}bps (< ${botConfig.min_spread_bps}) — market-closing to avoid risk`);
+        // Cancel any remaining SELL leg first
+        if (pp.sell_order_id) await cancelOrder(pp.symbol, pp.sell_order_id);
+        await placeMarketReduceClose(pp.symbol, "Sell", pos_size);
+        pending.delete(pp.symbol);
+        return;
+      }
+    }
+  }
+
   let hedge_id: string | null = null;
   let hedge_px: number = pp.sell_price;
   if (sell_live) {
@@ -455,7 +494,21 @@ async function onBuyFilled(pp: PendingPair, pos: any): Promise<void> {
     hedge_id = pp.sell_order_id;
   } else {
     const inst = instrumentCache.get(pp.symbol);
-    hedge_px = inst ? roundPrice(pp.sell_price, inst.price_tick) : pp.sell_price;
+    // === SMART HEDGE RE-PRICING ===
+    // Instead of pricing the hedge at the stale original sell_price, re-price
+    // to the current best ask (we're long, need to sell, so join the ask).
+    // This dramatically increases fill probability and captures real spread.
+    if (botConfig.reprice_hedge) {
+      const q = await getQuote(pp.symbol, 5);
+      if (q && q.ask > 0) {
+        hedge_px = inst ? roundPrice(q.ask, inst.price_tick) : q.ask;
+        botLog("INFO", `  -> ${pp.symbol} re-priced hedge from stale ${pp.sell_price} to current ask ${hedge_px}`);
+      } else {
+        hedge_px = inst ? roundPrice(pp.sell_price, inst.price_tick) : pp.sell_price;
+      }
+    } else {
+      hedge_px = inst ? roundPrice(pp.sell_price, inst.price_tick) : pp.sell_price;
+    }
     hedge_id = await placeLimit(pp.symbol, "Sell", pos_size, hedge_px, { reduce_only: true });
     if (!hedge_id) botLog("ERROR", `  -> ${pp.symbol} hedge placement FAILED — position remains OPEN!`);
   }
@@ -486,6 +539,23 @@ async function onSellFilled(pp: PendingPair, pos: any): Promise<void> {
     return;
   }
 
+  // === SPREAD RE-VERIFICATION ===
+  if (botConfig.verify_spread_at_fill) {
+    const q = await getQuote(pp.symbol, 5);
+    if (q) {
+      const current_spread_bps = q.spread_bps;
+      const adverse_move_bps = ((pp.sell_price - q.bid) / pp.sell_price) * 10000;
+      botLog("INFO", `  -> ${pp.symbol} current spread=${current_spread_bps.toFixed(1)}bps, bid moved ${adverse_move_bps >= 0 ? "+" : ""}${adverse_move_bps.toFixed(1)}bps from entry`);
+      if (current_spread_bps < botConfig.min_spread_bps && !buy_live) {
+        botLog("WARNING", `  -> ${pp.symbol} SPREAD COLLAPSED to ${current_spread_bps.toFixed(1)}bps (< ${botConfig.min_spread_bps}) — market-closing to avoid risk`);
+        if (pp.buy_order_id) await cancelOrder(pp.symbol, pp.buy_order_id);
+        await placeMarketReduceClose(pp.symbol, "Buy", pos_size);
+        pending.delete(pp.symbol);
+        return;
+      }
+    }
+  }
+
   let hedge_id: string | null = null;
   let hedge_px: number = pp.buy_price;
   if (buy_live) {
@@ -493,7 +563,19 @@ async function onSellFilled(pp: PendingPair, pos: any): Promise<void> {
     hedge_id = pp.buy_order_id;
   } else {
     const inst = instrumentCache.get(pp.symbol);
-    hedge_px = inst ? roundPrice(pp.buy_price, inst.price_tick) : pp.buy_price;
+    // === SMART HEDGE RE-PRICING ===
+    // We're short, need to buy back. Join the current best bid.
+    if (botConfig.reprice_hedge) {
+      const q = await getQuote(pp.symbol, 5);
+      if (q && q.bid > 0) {
+        hedge_px = inst ? roundPrice(q.bid, inst.price_tick) : q.bid;
+        botLog("INFO", `  -> ${pp.symbol} re-priced hedge from stale ${pp.buy_price} to current bid ${hedge_px}`);
+      } else {
+        hedge_px = inst ? roundPrice(pp.buy_price, inst.price_tick) : pp.buy_price;
+      }
+    } else {
+      hedge_px = inst ? roundPrice(pp.buy_price, inst.price_tick) : pp.buy_price;
+    }
     hedge_id = await placeLimit(pp.symbol, "Buy", pos_size, hedge_px, { reduce_only: true });
     if (!hedge_id) botLog("ERROR", `  -> ${pp.symbol} hedge placement FAILED — position remains OPEN!`);
   }
@@ -516,6 +598,68 @@ async function managePending(): Promise<void> {
       if (pp.buy_order_id) await cancelOrder(sym, pp.buy_order_id);
       if (pp.sell_order_id) await cancelOrder(sym, pp.sell_order_id);
       pending.delete(sym);
+    }
+  }
+}
+
+/**
+ * Smart stop-loss for open hedge legs. Two triggers:
+ *   1. TIME-BASED: if hedge hasn't filled within `hedge_timeout_sec`,
+ *      market-close to avoid holding risk indefinitely.
+ *   2. ADVERSE-MOVE: if unrealised loss exceeds `max_adverse_bps` (in bps
+ *      relative to entry price), market-close immediately to cap loss.
+ *
+ * This prevents the "stale hedge" problem where a passive limit order sits
+ * forever while the market runs against the position.
+ */
+async function manageOpenLegs(): Promise<void> {
+  const now = Date.now() / 1000;
+  for (const sym of Array.from(open_legs.keys())) {
+    const leg = open_legs.get(sym);
+    if (!leg) continue;
+    const age = now - leg.open_ts;
+
+    // Get current quote to compute unrealised loss
+    const q = await getQuote(sym, 5);
+    if (!q) continue;  // can't fetch quote, skip this cycle
+
+    // Compute unrealised PnL in bps relative to entry
+    // If LONG (Buy): mark-to-market at current bid (what we'd get selling now)
+    // If SHORT (Sell): mark-to-market at current ask (what we'd pay buying back)
+    let current_price: number;
+    let adverse_bps: number;
+    if (leg.side === "Buy") {
+      current_price = q.bid;
+      adverse_bps = ((leg.entry_price - current_price) / leg.entry_price) * 10000;
+    } else {
+      current_price = q.ask;
+      adverse_bps = ((current_price - leg.entry_price) / leg.entry_price) * 10000;
+    }
+
+    // Trigger 1: adverse move beyond threshold
+    if (adverse_bps > botConfig.max_adverse_bps) {
+      botLog("WARNING", `[SL-ADVERSE] ${sym} side=${leg.side} entry=${leg.entry_price} current=${current_price} loss=${adverse_bps.toFixed(1)}bps > ${botConfig.max_adverse_bps}bps — market-closing`);
+      // Cancel existing hedge limit order first
+      if (leg.hedge_order_id) await cancelOrder(sym, leg.hedge_order_id);
+      const close_side = leg.side === "Buy" ? "Sell" : "Buy";
+      await placeMarketReduceClose(sym, close_side, leg.qty);
+      open_legs.delete(sym);
+      continue;
+    }
+
+    // Trigger 2: hedge timed out
+    if (age > botConfig.hedge_timeout_sec) {
+      botLog("WARNING", `[SL-TIMEOUT] ${sym} side=${leg.side} age=${age.toFixed(0)}s > ${botConfig.hedge_timeout_sec}s — hedge not filled, market-closing`);
+      if (leg.hedge_order_id) await cancelOrder(sym, leg.hedge_order_id);
+      const close_side = leg.side === "Buy" ? "Sell" : "Buy";
+      await placeMarketReduceClose(sym, close_side, leg.qty);
+      open_legs.delete(sym);
+      continue;
+    }
+
+    // Status log every ~10s
+    if (Math.floor(age) % 10 === 0 && Math.floor(age) > 0) {
+      botLog("INFO", `[LEG] ${sym} side=${leg.side} age=${age.toFixed(0)}s adverse=${adverse_bps.toFixed(1)}bps (max ${botConfig.max_adverse_bps})`);
     }
   }
 }
@@ -544,6 +688,7 @@ async function step(universe: string[]): Promise<void> {
 
   await reconcile();
   await managePending();
+  await manageOpenLegs();  // smart SL checks
 
   if (halted) return;
 
@@ -620,11 +765,22 @@ async function workerTick(): Promise<void> {
     const current_legs = new Set(open_legs.keys());
     for (const [sym, leg] of last_legs_snapshot) {
       if (!current_legs.has(sym)) {
+        // Compute realized PnL for this cycle:
+        // If we were LONG (Buy leg filled first), PnL = (exit - entry) * qty
+        // If we were SHORT (Sell leg filled first), PnL = (entry - exit) * qty
+        const cycle_pnl = leg.side === "Buy"
+          ? (leg.hedge - leg.entry) * leg.qty
+          : (leg.entry - leg.hedge) * leg.qty;
         trade_history.push({
           ts: now, symbol: sym,
           side: leg.side, entry: leg.entry, exit: leg.hedge,
-          qty: leg.qty, note: "closed",
+          qty: leg.qty, pnl: cycle_pnl, note: "closed",
         });
+        // Update session stats
+        session_stats.total_cycles += 1;
+        session_stats.total_realized_pnl += cycle_pnl;
+        if (cycle_pnl > 0) session_stats.winning_cycles += 1;
+        else if (cycle_pnl < 0) session_stats.losing_cycles += 1;
         if (trade_history.length > 200) trade_history.shift();
       }
     }
@@ -797,14 +953,17 @@ export async function getSnapshot(): Promise<any> {
 
   const excluded = Array.from(new Set([...runtime_excluded, ...EXCLUDED_SYMBOLS])).sort();
 
-  // Fetch top spreads (limit to 6 for speed)
+  // Fetch top spreads (limit to 6 for speed) — parallelized
   let universe: string[] = universe_cache;
   if (universe.length === 0) {
     try { universe = await getTopUniverse(botConfig.symbol_universe_size); } catch { universe = []; }
   }
+  const spreadSyms = universe.slice(0, 6);
+  const quoteResults = await Promise.all(
+    spreadSyms.map(sym => getQuote(sym, 3).then(q => ({ sym, q })).catch(() => ({ sym, q: null })))
+  );
   const spreads: any[] = [];
-  for (const sym of universe.slice(0, 6)) {
-    const q = await getQuote(sym, 3);
+  for (const { sym, q } of quoteResults) {
     if (q) {
       spreads.push({
         symbol: sym, bid: q.bid, ask: q.ask,
@@ -847,6 +1006,14 @@ export async function getSnapshot(): Promise<any> {
     universe,
     top_spreads: spreads.sort((a, b) => b.spread_bps - a.spread_bps).slice(0, 10),
     config: { ...botConfig },
+    session_stats: {
+      ...session_stats,
+      session_duration_sec: Math.round((Date.now() / 1000) - session_stats.session_start_ts),
+      win_rate: session_stats.total_cycles > 0
+        ? (session_stats.winning_cycles / session_stats.total_cycles) * 100
+        : 0,
+    },
+    halted,
   };
 }
 

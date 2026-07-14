@@ -48,6 +48,19 @@ export interface BotState {
   universe: string[];
   top_spreads: SpreadOp[];
   config: BotConfig;
+  session_stats?: SessionStats;
+  halted?: boolean;
+}
+
+export interface SessionStats {
+  total_cycles: number;
+  winning_cycles: number;
+  losing_cycles: number;
+  total_realized_pnl: number;
+  total_fees_paid: number;
+  session_start_ts: number;
+  session_duration_sec: number;
+  win_rate: number;
 }
 
 export interface Position {
@@ -108,6 +121,12 @@ export interface BotConfig {
   max_drawdown_pct: number;
   symbol_universe_size: number;
   auto_min_notional: boolean;
+  min_notional_usdt: number;
+  // Smart SL params
+  hedge_timeout_sec: number;
+  max_adverse_bps: number;
+  reprice_hedge: boolean;
+  verify_spread_at_fill: boolean;
 }
 
 export interface LogEntry {
@@ -131,5 +150,6 @@ export interface Trade {
   entry: number;
   exit: number;
   qty: number;
+  pnl?: number;
   note: string;
 }
