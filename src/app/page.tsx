@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useRef } from "react"
 import {
   Activity, Play, Square, Trash2, RefreshCw, TrendingUp, TrendingDown,
   Wallet, Layers, AlertTriangle, Settings, Terminal, Zap, X,
-  Moon, Sun, Trophy, Percent, Timer, Target,
 } from "lucide-react"
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
@@ -50,41 +49,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState<string | null>(null)
   const [configDraft, setConfigDraft] = useState<BotConfig | null>(null)
-  const [configDirty, setConfigDirty] = useState(false)  // true when user has unsaved edits
   const [error, setError] = useState<string | null>(null)
-  const [darkMode, setDarkMode] = useState(false)
-  const [haltedNotified, setHaltedNotified] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  // ---- Dark mode: toggle `dark` class on <html> ----
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add("dark")
-    } else {
-      document.documentElement.classList.remove("dark")
-    }
-  }, [darkMode])
-
-  // ---- Halt notification: fire toast when bot halts due to drawdown ----
-  useEffect(() => {
-    if (state?.halted && !haltedNotified) {
-      toast.error("Bot HALTED", {
-        description: "Max drawdown threshold reached. Trading stopped. Click Cleanup to flatten positions.",
-        duration: 15000,
-      })
-      setHaltedNotified(true)
-    } else if (!state?.halted && haltedNotified) {
-      setHaltedNotified(false)
-    }
-  }, [state?.halted, haltedNotified])
-
-  // ---- Auto-scroll log viewer to top when new logs arrive (logs are reversed = newest first) ----
-  const logTopRef = useRef<HTMLDivElement | null>(null)
-  useEffect(() => {
-    if (logTopRef.current) {
-      logTopRef.current.scrollIntoView({ behavior: "smooth", block: "start" })
-    }
-  }, [logs.length])
 
   // ---- Polling ----
   const refresh = useCallback(async () => {
@@ -99,15 +65,14 @@ export default function Home() {
       setLogs(l.logs)
       setTrades(t.trades)
       setEquityHistory(e.points)
-      // Don't clobber user's unsaved config edits — only sync from server if clean
-      setConfigDraft(prev => configDirty ? prev : s.config)
+      setConfigDraft(s.config)
       setError(null)
     } catch (err: any) {
       setError(err.message || String(err))
     } finally {
       setLoading(false)
     }
-  }, [configDirty])
+  }, [])
 
   useEffect(() => {
     refresh()
@@ -148,20 +113,7 @@ export default function Home() {
         method: "POST",
         body: JSON.stringify(configDraft),
       })
-    ).then(() => {
-      setConfigDirty(false)
-    }).catch(() => { /* toast already shown */ })
-  }
-  const resetConfig = () => {
-    if (state) {
-      setConfigDraft(state.config)
-      setConfigDirty(false)
-    }
-  }
-  // Wrapper that marks config as dirty when user edits
-  const updateConfig = (patch: Partial<BotConfig>) => {
-    setConfigDraft(prev => prev ? { ...prev, ...patch } : prev)
-    setConfigDirty(true)
+    )
   }
 
   // ---- Render ----
@@ -200,12 +152,7 @@ export default function Home() {
               <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${isRunning ? "bg-white animate-pulse" : "bg-muted-foreground"}`} />
               {isRunning ? "RUNNING" : "STOPPED"}
             </Badge>
-            {state?.halted && (
-              <Badge variant="destructive" className="ml-1 animate-pulse">
-                <AlertTriangle className="w-3 h-3 mr-1" /> HALTED
-              </Badge>
-            )}
-            {state?.last_error && !state?.halted && (
+            {state?.last_error && (
               <Badge variant="destructive" className="ml-1">
                 <AlertTriangle className="w-3 h-3 mr-1" /> Error
               </Badge>
@@ -268,17 +215,8 @@ export default function Home() {
               variant="ghost"
               onClick={refresh}
               disabled={busy !== null}
-              title="Refresh now"
             >
               <RefreshCw className="w-4 h-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setDarkMode(!darkMode)}
-              title="Toggle dark mode"
-            >
-              {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
           </div>
         </div>
@@ -299,7 +237,7 @@ export default function Home() {
         )}
 
         {/* Stat cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <StatCard
             label="Equity"
             value={`$${equity.toFixed(4)}`}
@@ -319,20 +257,6 @@ export default function Home() {
             sub={`${state?.positions.length ?? 0} open position${(state?.positions.length ?? 0) === 1 ? "" : "s"}`}
             icon={<Activity className="w-4 h-4" />}
             tone={unrealisedPnl >= 0 ? "up" : "down"}
-          />
-          <StatCard
-            label="Realized PnL"
-            value={`${(state?.session_stats?.total_realized_pnl ?? 0) >= 0 ? "+" : ""}$${(state?.session_stats?.total_realized_pnl ?? 0).toFixed(4)}`}
-            sub={`${state?.session_stats?.total_cycles ?? 0} cycles this session`}
-            icon={<Target className="w-4 h-4" />}
-            tone={(state?.session_stats?.total_realized_pnl ?? 0) >= 0 ? "up" : "down"}
-          />
-          <StatCard
-            label="Win Rate"
-            value={`${(state?.session_stats?.win_rate ?? 0).toFixed(1)}%`}
-            sub={`${state?.session_stats?.winning_cycles ?? 0}W / ${state?.session_stats?.losing_cycles ?? 0}L`}
-            icon={<Percent className="w-4 h-4" />}
-            tone={(state?.session_stats?.win_rate ?? 0) >= 50 ? "up" : "down"}
           />
           <StatCard
             label="Active Cycles"
@@ -722,8 +646,8 @@ export default function Home() {
                         <TableHead className="text-right">Entry</TableHead>
                         <TableHead className="text-right">Exit</TableHead>
                         <TableHead className="text-right">Qty</TableHead>
+                        <TableHead className="text-right">Spread</TableHead>
                         <TableHead className="text-right">PnL</TableHead>
-                        <TableHead className="text-right">Note</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -735,11 +659,9 @@ export default function Home() {
                         </TableRow>
                       ) : (
                         [...trades].reverse().map((t, i) => {
-                          const pnl = typeof t.pnl === "number"
-                            ? t.pnl
-                            : (t.side === "Buy"
-                                ? (t.exit - t.entry) * t.qty
-                                : (t.entry - t.exit) * t.qty)
+                          const spread = t.side === "Buy"
+                            ? (t.exit - t.entry) * t.qty
+                            : (t.entry - t.exit) * t.qty
                           return (
                             <TableRow key={i}>
                               <TableCell className="text-muted-foreground text-xs">
@@ -752,8 +674,8 @@ export default function Home() {
                               <TableCell className="text-right font-mono">{t.entry}</TableCell>
                               <TableCell className="text-right font-mono">{t.exit}</TableCell>
                               <TableCell className="text-right font-mono">{t.qty}</TableCell>
-                              <TableCell className={`text-right font-mono ${pnl >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                                {pnl >= 0 ? "+" : ""}${pnl.toFixed(4)}
+                              <TableCell className="text-right font-mono text-emerald-600">
+                                +${spread.toFixed(4)}
                               </TableCell>
                               <TableCell className="text-right font-mono text-muted-foreground text-xs">
                                 {t.note}
@@ -781,7 +703,6 @@ export default function Home() {
               <CardContent>
                 <ScrollArea className="h-72 rounded-md border bg-zinc-950">
                   <div className="p-3 font-mono text-xs space-y-0.5">
-                    <div ref={logTopRef} />
                     {logs.length === 0 ? (
                       <div className="text-zinc-500 py-4 text-center">No logs yet</div>
                     ) : (
@@ -829,7 +750,7 @@ export default function Home() {
                         value={configDraft.per_trade_margin_pct * 100}
                         step={0.1}
                         suffix="%"
-                        onChange={(v) => updateConfig({ per_trade_margin_pct: v / 100 })}
+                        onChange={(v) => setConfigDraft({ ...configDraft, per_trade_margin_pct: v / 100 })}
                         help="2% means 2% of equity as margin"
                       />
                       <ConfigNumber
@@ -837,77 +758,61 @@ export default function Home() {
                         value={configDraft.leverage}
                         step={1}
                         suffix="x"
-                        onChange={(v) => updateConfig({ leverage: Math.round(v) })}
+                        onChange={(v) => setConfigDraft({ ...configDraft, leverage: Math.round(v) })}
                       />
                       <ConfigNumber
                         label="Max concurrent symbols"
                         value={configDraft.max_concurrent_symbols}
                         step={1}
-                        onChange={(v) => updateConfig({ max_concurrent_symbols: Math.round(v) })}
+                        onChange={(v) => setConfigDraft({ ...configDraft, max_concurrent_symbols: Math.round(v) })}
                       />
                       <ConfigNumber
                         label="Min spread (bps)"
                         value={configDraft.min_spread_bps}
                         step={0.5}
                         suffix=" bps"
-                        onChange={(v) => updateConfig({ min_spread_bps: v })}
+                        onChange={(v) => setConfigDraft({ ...configDraft, min_spread_bps: v })}
                       />
                       <ConfigNumber
                         label="Target capture (bps)"
                         value={configDraft.target_capture_bps}
                         step={0.5}
                         suffix=" bps"
-                        onChange={(v) => updateConfig({ target_capture_bps: v })}
+                        onChange={(v) => setConfigDraft({ ...configDraft, target_capture_bps: v })}
                       />
                       <ConfigNumber
                         label="Order timeout (s)"
                         value={configDraft.order_timeout_sec}
                         step={5}
                         suffix="s"
-                        onChange={(v) => updateConfig({ order_timeout_sec: Math.round(v) })}
+                        onChange={(v) => setConfigDraft({ ...configDraft, order_timeout_sec: Math.round(v) })}
                       />
                       <ConfigNumber
                         label="Poll interval (s)"
                         value={configDraft.poll_interval_sec}
                         step={1}
                         suffix="s"
-                        onChange={(v) => updateConfig({ poll_interval_sec: Math.round(v) })}
+                        onChange={(v) => setConfigDraft({ ...configDraft, poll_interval_sec: Math.round(v) })}
                       />
                       <ConfigNumber
                         label="Scan interval (s)"
                         value={configDraft.scan_interval_sec}
                         step={5}
                         suffix="s"
-                        onChange={(v) => updateConfig({ scan_interval_sec: Math.round(v) })}
+                        onChange={(v) => setConfigDraft({ ...configDraft, scan_interval_sec: Math.round(v) })}
                       />
                       <ConfigNumber
                         label="Max drawdown (%)"
                         value={configDraft.max_drawdown_pct * 100}
                         step={1}
                         suffix="%"
-                        onChange={(v) => updateConfig({ max_drawdown_pct: v / 100 })}
+                        onChange={(v) => setConfigDraft({ ...configDraft, max_drawdown_pct: v / 100 })}
                       />
                       <ConfigNumber
                         label="Universe size"
                         value={configDraft.symbol_universe_size}
                         step={5}
-                        onChange={(v) => updateConfig({ symbol_universe_size: Math.round(v) })}
-                      />
-                      <ConfigNumber
-                        label="Hedge timeout (s)"
-                        value={configDraft.hedge_timeout_sec}
-                        step={5}
-                        suffix="s"
-                        onChange={(v) => updateConfig({ hedge_timeout_sec: Math.round(v) })}
-                        help="Market-close if hedge doesn't fill in N sec"
-                      />
-                      <ConfigNumber
-                        label="Max adverse (bps)"
-                        value={configDraft.max_adverse_bps}
-                        step={1}
-                        suffix=" bps"
-                        onChange={(v) => updateConfig({ max_adverse_bps: v })}
-                        help="Market-close if unrealised loss exceeds N bps"
+                        onChange={(v) => setConfigDraft({ ...configDraft, symbol_universe_size: Math.round(v) })}
                       />
                     </div>
 
@@ -921,33 +826,7 @@ export default function Home() {
                       </div>
                       <Switch
                         checked={configDraft.auto_min_notional}
-                        onCheckedChange={(c) => updateConfig({ auto_min_notional: c })}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <Label className="font-medium">Re-price hedge to current market</Label>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          When a leg fills, price the hedge at the current best opposite quote instead of the stale original price. Dramatically improves fill rate and captured spread.
-                        </p>
-                      </div>
-                      <Switch
-                        checked={configDraft.reprice_hedge}
-                        onCheckedChange={(c) => updateConfig({ reprice_hedge: c })}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <Label className="font-medium">Verify spread at fill time</Label>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          When a leg fills, re-check the current spread. If it has collapsed below min_spread_bps, market-close immediately instead of placing a passive hedge that may never fill.
-                        </p>
-                      </div>
-                      <Switch
-                        checked={configDraft.verify_spread_at_fill}
-                        onCheckedChange={(c) => updateConfig({ verify_spread_at_fill: c })}
+                        onCheckedChange={(c) => setConfigDraft({ ...configDraft, auto_min_notional: c })}
                       />
                     </div>
 
@@ -964,15 +843,10 @@ export default function Home() {
                       </Button>
                       <Button
                         variant="ghost"
-                        onClick={resetConfig}
+                        onClick={() => state && setConfigDraft(state.config)}
                       >
                         Reset
                       </Button>
-                      {configDirty && (
-                        <Badge variant="outline" className="text-amber-600 border-amber-600">
-                          unsaved changes
-                        </Badge>
-                      )}
                       <span className="text-xs text-muted-foreground ml-auto">
                         Bot will pick up new values on the next poll cycle.
                       </span>
