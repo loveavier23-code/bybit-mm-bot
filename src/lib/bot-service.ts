@@ -297,15 +297,18 @@ async function cancelAllOrders(): Promise<void> {
   }
 }
 
-async function placeMarketReduceClose(symbol: string, side: string, qty: number): Promise<void> {
+async function placeMarketReduceClose(symbol: string, side: string, qty: number): Promise<string | null> {
   try {
-    await bybitPost("/v5/order/create", {
+    const r: any = await bybitPost("/v5/order/create", {
       category: CATEGORY, symbol, side,
       orderType: "Market", qty: String(qty), reduceOnly: true,
     });
-    botLog("INFO", `  closed ${symbol} (${side} ${qty})`);
+    const oid = r?.result?.orderId;
+    botLog("INFO", `  closed ${symbol} (${side} ${qty}) oid=${oid}`);
+    return oid || null;
   } catch (e: any) {
     botLog("WARNING", `  close ${symbol} failed: ${e.message}`);
+    return null;
   }
 }
 
@@ -370,7 +373,7 @@ let session_stats = {
 // BOT LOGIC
 // ============================================================================
 function computeQty(price: number, inst: Instrument, equity: number): number | null {
-  if (equity <= 0) return null;
+  if (equity <= 0 || price <= 0 || inst.qty_step <= 0) return null;
   const margin = equity * botConfig.per_trade_margin_pct;
   let notional = margin * botConfig.leverage;
   const min_notional = Math.max(inst.min_notional, botConfig.min_notional_usdt);
@@ -387,15 +390,36 @@ function computeQty(price: number, inst: Instrument, equity: number): number | n
 
   let qty: number;
   if (bumped) {
-    qty = Math.ceil(notional / price / inst.qty_step) * inst.qty_step;
+    // Round UP to satisfy min notional after rounding
+    const raw_steps = notional / price / inst.qty_step;
+    qty = Math.max(1, Math.ceil(raw_steps)) * inst.qty_step;
   } else {
-    qty = Math.floor(notional / price / inst.qty_step) * inst.qty_step;
+    // Round DOWN to stay at-or-below 2%
+    qty = Math.floor((notional / price) / inst.qty_step) * inst.qty_step;
   }
-  if (qty < inst.min_order_qty) return null;
+
+  // Guard against zero qty (causes "orderQty will be truncated to zero" Bybit error)
+  if (qty <= 0 || qty < inst.min_order_qty) {
+    // Try one step above min_order_qty
+    const fallback_qty = inst.min_order_qty;
+    if (fallback_qty * price < min_notional - 1e-9) {
+      // Even min qty is too small for min notional — skip this symbol
+      return null;
+    }
+    qty = fallback_qty;
+  }
+
+  // Final min-notional safety: bump up by one step if needed
   if (qty * price < min_notional - 1e-9) {
     qty = qty + inst.qty_step;
     if (qty * price < min_notional - 1e-9) return null;
   }
+
+  // Sanity: ensure qty is a valid multiple of qty_step
+  const steps = Math.round(qty / inst.qty_step);
+  qty = steps * inst.qty_step;
+  if (qty <= 0) return null;
+
   return qty;
 }
 
@@ -422,6 +446,12 @@ async function reconcile(): Promise<void> {
     const pos = pos_by_sym.get(sym);
     const pos_size = pos ? Math.abs(parseFloat(pos.size || "0")) : 0;
     const pos_side = pos ? pos.side : "";
+
+    // Partial-fill guard: if position size < order qty, only part of one leg filled.
+    // We still treat it as "filled" and hedge the actual position size, but log it.
+    if (pos_size > 0 && pos_size < pp.qty) {
+      botLog("WARNING", `  ${sym}: PARTIAL FILL detected — pos_size=${pos_size} < order_qty=${pp.qty}. Hedging actual size only.`);
+    }
 
     if (pos_size > 0 && pos_side === "Buy") {
       await onBuyFilled(pp, pos);
@@ -667,8 +697,17 @@ async function manageOpenLegs(): Promise<void> {
 async function checkDrawdown(): Promise<boolean> {
   let equity = 0;
   try { [equity] = await getEquity(); } catch (e: any) {
-    botLog("WARNING", `equity fetch failed: ${e.message}`);
+    botLog("WARNING", `equity fetch failed (will retry next tick): ${e.message}`);
+    // Don't halt — transient network errors shouldn't stop the bot.
+    // But also don't continue placing new trades blind — return true to allow
+    // reconcile/manageOpenLegs to run (which may close positions for safety),
+    // but step() will fail to size new orders without equity, so no new trades.
     return true;
+  }
+  if (equity <= 0) {
+    botLog("WARNING", `equity is zero/negative (${equity}) — halting new trades`);
+    halted = true;
+    return false;
   }
   if (equity > equity_peak) equity_peak = equity;
   if (equity_peak > 0) {
@@ -740,9 +779,16 @@ async function step(universe: string[]): Promise<void> {
 
 let last_scan_ts = 0;
 let universe_cache: string[] = [];
+let worker_in_progress = false;  // mutex: prevent overlapping workerTick calls
 
 async function workerTick(): Promise<void> {
   if (stop_requested || !bot_running) return;
+  // Mutex: if previous tick is still running (slow Bybit API), skip this one
+  if (worker_in_progress) {
+    botLog("DEBUG", `workerTick skipped — previous tick still in progress`);
+    return;
+  }
+  worker_in_progress = true;
   try {
     const now = Date.now() / 1000;
     if (now - last_scan_ts > botConfig.scan_interval_sec || universe_cache.length === 0) {
@@ -793,6 +839,8 @@ async function workerTick(): Promise<void> {
   } catch (e: any) {
     botLog("ERROR", `Worker tick error: ${e.message}`);
     last_error = e.message;
+  } finally {
+    worker_in_progress = false;
   }
 }
 
@@ -808,24 +856,16 @@ async function recoverOrphans(): Promise<void> {
     if (size < 1e-9) continue;
     const side = pos.side || "Buy";
     const entry = parseFloat(pos.entryPrice || "0");
-    botLog("WARNING", `[RECOVER] orphan position ${sym} side=${side} size=${size} entry=${entry} — placing hedge`);
-    const q = await getQuote(sym, 5);
-    if (!q) { botLog("ERROR", `  cannot fetch orderbook for ${sym}`); continue; }
-    const inst = instrumentCache.get(sym);
-    if (!inst) continue;
-    let hedge_px: number, hedge_side: string;
-    if (side === "Buy") {
-      hedge_px = roundPrice(q.bid, inst.price_tick);
-      hedge_side = "Sell";
-    } else {
-      hedge_px = roundPrice(q.ask, inst.price_tick);
-      hedge_side = "Buy";
+    botLog("WARNING", `[RECOVER] orphan position ${sym} side=${side} size=${size} entry=${entry} — market-closing immediately`);
+    // For recovery, use MARKET reduce-only to guarantee immediate flatten.
+    // Limit orders could sit unfilled and leave risk open.
+    const close_side = side === "Buy" ? "Sell" : "Buy";
+    const oid = await placeMarketReduceClose(sym, close_side, size);
+    // Don't track in open_legs since market order should fill instantly.
+    // Reconcile will detect position gone next tick.
+    if (oid) {
+      botLog("INFO", `  -> ${sym} recovery market-close placed oid=${oid}`);
     }
-    const oid = await placeLimit(sym, hedge_side, size, hedge_px, { reduce_only: true });
-    open_legs.set(sym, {
-      symbol: sym, side, qty: size, entry_price: entry,
-      open_ts: Date.now() / 1000, hedge_order_id: oid, hedge_price: hedge_px,
-    });
   }
 }
 
@@ -883,14 +923,15 @@ export async function stopBot(): Promise<any> {
     worker_interval = null;
   }
   // Cancel any pending MM pairs so we don't leave orphan post-only orders on the book
-  botLog("INFO", `Stopping bot — cancelling ${pending.size} pending pair(s)`);
+  const cancelledCount = pending.size;
+  botLog("INFO", `Stopping bot — cancelling ${cancelledCount} pending pair(s)`);
   for (const [sym, pp] of Array.from(pending.entries())) {
     if (pp.buy_order_id) await cancelOrder(sym, pp.buy_order_id);
     if (pp.sell_order_id) await cancelOrder(sym, pp.sell_order_id);
     pending.delete(sym);
   }
   botLog("INFO", "Bot stopped");
-  return { status: "stopped", cancelled_pairs: pending.size };
+  return { status: "stopped", cancelled_pairs: cancelledCount };
 }
 
 export async function cleanupBot(): Promise<any> {
