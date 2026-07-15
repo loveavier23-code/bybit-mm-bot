@@ -1263,7 +1263,7 @@ export async function startBot(): Promise<any> {
   last_error = null;
   session_id = `session_${Date.now()}`;
   botLog("INFO", `Starting new session: ${session_id}`);
-  // Persist "running" state to Supabase and resume cron job
+  // Persist "running" state to Supabase and enable cron job
   try {
     const sb = (await import("@/lib/supabase")).getSupabase();
     if (sb) {
@@ -1271,20 +1271,20 @@ export async function startBot(): Promise<any> {
         halted: false,
         updated_at: new Date().toISOString(),
       }).eq("id", 1);
-      // Resume the pg_cron job so ticks start firing again
-      await sb.rpc("resume_cron");
-      botLog("INFO", "pg_cron job resumed — ticks will fire every minute");
+      // Recreate the pg_cron job so ticks fire every minute
+      await sb.rpc("enable_cron");
+      botLog("INFO", "pg_cron job created — ticks will fire every minute");
     }
   } catch {}
   try { await recoverOrphans(); } catch (e: any) {
     botLog("WARNING", `recover failed: ${e.message}`);
   }
-  if (worker_interval) clearInterval(worker_interval);
-  const intervalMs = Math.max(1000, botConfig.poll_interval_sec * 1000);
-  worker_interval = setInterval(() => {
-    workerTick().catch(e => botLog("ERROR", `interval error: ${e.message}`));
-  }, intervalMs);
-  botLog("INFO", "Bot started — cron ticks will now place trades");
+  // NOTE: Do NOT start a setInterval worker on Vercel — serverless function
+  // instances are ephemeral and can't be stopped from another request.
+  // The pg_cron job in Supabase is the ONLY thing that triggers ticks.
+  // Starting a setInterval here would create a zombie that keeps trading
+  // even after Stop is clicked (from a different instance).
+  botLog("INFO", "Bot started — pg_cron will trigger ticks every minute");
   return { status: "started" };
 }
 
@@ -1331,10 +1331,11 @@ export async function stopBot(): Promise<any> {
         halted: true,
         updated_at: new Date().toISOString(),
       }).eq("id", 1);
-      // Pause the pg_cron job so it stops triggering /api/bot/tick entirely.
-      // This prevents any chance of new orders being placed while stopped.
-      await sb.rpc("pause_cron");
-      botLog("INFO", "pg_cron job paused — no more tick triggers until Start");
+      // Completely delete the pg_cron job so it stops triggering /api/bot/tick.
+      // pause_cron (active=false) doesn't reliably stop already-queued runs.
+      // disable_cron unschedules (deletes) the job entirely.
+      await sb.rpc("disable_cron");
+      botLog("INFO", "pg_cron job deleted — no more tick triggers until Start");
     }
   } catch {}
   botLog("INFO", `Bot stopped — cancelled ${cancelledInMemory} in-memory + ${cancelledBybit} Bybit orders. Cron ticks halted.`);
@@ -1600,14 +1601,7 @@ export function updateConfig(updates: Record<string, any>): { applied: any; conf
       applied[k] = v;
     }
   }
-  // If poll_interval changed and bot is running, restart the interval
-  if (botConfig.poll_interval_sec && worker_interval) {
-    clearInterval(worker_interval);
-    const intervalMs = Math.max(1000, botConfig.poll_interval_sec * 1000);
-    worker_interval = setInterval(() => {
-      workerTick().catch(e => botLog("ERROR", `interval error: ${e.message}`));
-    }, intervalMs);
-  }
+  // No setInterval to restart — pg_cron handles tick scheduling
   return { applied, config: { ...botConfig } };
 }
 
