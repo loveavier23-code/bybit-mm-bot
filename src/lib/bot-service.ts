@@ -1160,36 +1160,16 @@ async function cleanupAll(): Promise<void> {
 export async function cronTick(): Promise<any> {
   const tickStart = Date.now();
 
-  // Check Supabase for persisted stopped/halted state (survives cold starts).
-  // Vercel serverless is stateless — in-memory `stop_requested` resets on every
-  // cold start, so we must check the database to know if the user clicked Stop.
-  try {
-    const sb = (await import("@/lib/supabase")).getSupabase();
-    if (sb) {
-      const { data } = await sb.from("bot_state").select("halted").eq("id", 1).single();
-      if (data?.halted) {
-        stop_requested = true;
-        halted = true;
-      }
-    }
-  } catch {}
+  // Sync halted/stopped state from Supabase (survives cold starts)
+  await syncHaltedFromSupabase();
 
   // Respect stop_requested and halted flags.
   // If the user clicked Stop (persisted to Supabase), cron ticks are no-ops.
-  if (stop_requested) {
+  if (stop_requested || halted) {
     return {
       status: "stopped",
       duration_ms: Date.now() - tickStart,
       message: "Bot is stopped — cron tick skipped. Click Start to resume.",
-      pending: pending.size,
-      open_legs: open_legs.size,
-    };
-  }
-  if (halted) {
-    return {
-      status: "halted",
-      duration_ms: Date.now() - tickStart,
-      message: "Bot is halted (drawdown) — cron tick skipped",
       pending: pending.size,
       open_legs: open_legs.size,
     };
@@ -1428,7 +1408,32 @@ function makeErrorResponse(error: string, isRunning: boolean): any {
   };
 }
 
+/**
+ * Sync the halted/stopped state from Supabase.
+ * Vercel serverless is stateless — in-memory `halted` resets to false on every
+ * cold start. This function loads the persisted state so the dashboard and
+ * cron ticks know whether the user clicked Stop.
+ */
+async function syncHaltedFromSupabase(): Promise<void> {
+  try {
+    const sb = (await import("@/lib/supabase")).getSupabase();
+    if (!sb) return;
+    const { data, error } = await sb.from("bot_state").select("halted").eq("id", 1).single();
+    if (!error && data) {
+      const wasHalted = halted;
+      halted = !!data.halted;
+      if (halted) stop_requested = true;
+      else if (wasHalted && !halted) stop_requested = false;
+    }
+  } catch (e: any) {
+    // Don't log — this runs on every request and would spam logs
+  }
+}
+
 export async function getSnapshot(): Promise<any> {
+  // Sync halted flag from Supabase FIRST (stateless persistence)
+  await syncHaltedFromSupabase();
+
   if (!instrumentsLoaded) {
     try { await refreshInstruments(); } catch (e: any) {
       return makeErrorResponse(`init failed: ${e.message}`, bot_running);
