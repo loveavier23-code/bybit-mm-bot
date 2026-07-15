@@ -973,14 +973,22 @@ async function checkDrawdown(): Promise<boolean> {
 }
 
 async function step(universe: string[]): Promise<void> {
-  if (halted) return;
+  // Double-check halted from Supabase — protects against zombie instances
+  // that have stale in-memory halted=false (Vercel cold starts reset memory).
+  // This is the LAST LINE OF DEFENSE: even if a zombie setInterval calls step(),
+  // it will check Supabase and bail out if the user clicked Stop.
+  await syncHaltedFromSupabase();
+  if (halted || stop_requested) {
+    botLog("INFO", "step() aborted — bot is halted/stopped (checked Supabase)");
+    return;
+  }
   if (!(await checkDrawdown())) return;
 
   await reconcile();
   await managePending();
   await manageOpenLegs();  // smart SL checks
 
-  if (halted) return;
+  if (halted || stop_requested) return;
 
   const active = new Set<string>([...pending.keys(), ...open_legs.keys()]);
   let slots = botConfig.max_concurrent_symbols - active.size;
