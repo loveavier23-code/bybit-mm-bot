@@ -67,10 +67,12 @@ export async function GET(
         return NextResponse.json({ logs: bot.getLogs(n), count: bot.getLogs(n).length });
       }
       case "trades": {
-        return NextResponse.json({ trades: bot.getTrades() });
+        const trades = await bot.getTradesAsync();
+        return NextResponse.json({ trades });
       }
       case "equity-history": {
-        return NextResponse.json({ points: bot.getEquityHistory() });
+        const points = await bot.getEquityHistoryAsync();
+        return NextResponse.json({ points });
       }
       default:
         return NextResponse.json({ error: `not found: GET ${route}` }, { status: 404 });

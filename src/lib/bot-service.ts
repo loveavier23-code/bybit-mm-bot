@@ -13,6 +13,10 @@
  */
 
 import { createHmac } from "node:crypto";
+import {
+  persistTrade, persistEquityPoint, loadTradeHistory, loadEquityHistory,
+  loadBotState, saveBotState,
+} from "@/lib/supabase";
 
 // ============================================================================
 // CONFIG
@@ -374,6 +378,13 @@ async function recordClosedLeg(symbol: string, leg: OpenLeg, reason: string): Pr
     side: leg.side, entry: leg.entry_price, exit: actual_exit,
     qty: leg.qty, pnl: cycle_pnl, gross_pnl, fees, note,
   });
+  // Persist to Supabase (survives serverless cold starts)
+  persistTrade({
+    ts: Date.now() / 1000, symbol,
+    side: leg.side, entry_price: leg.entry_price, exit_price: actual_exit,
+    qty: leg.qty, gross_pnl, fees, net_pnl: cycle_pnl,
+    close_reason: reason, session_id: session_id,
+  }).catch(e => botLog("DEBUG", `persistTrade failed: ${e.message}`));
   session_stats.total_cycles += 1;
   session_stats.total_realized_pnl += cycle_pnl;
   session_stats.total_fees_paid += fees;
@@ -539,6 +550,7 @@ let bot_running = false;
 let last_error: string | null = null;
 let stop_requested = false;
 let worker_interval: NodeJS.Timeout | null = null;
+let session_id: string = `session_${Date.now()}`;  // changes on each bot start
 
 const equity_history: any[] = [];
 const trade_history: any[] = [];
@@ -1022,6 +1034,14 @@ async function workerTick(): Promise<void> {
         pending: pending.size, legs: open_legs.size,
       });
       if (equity_history.length > 300) equity_history.shift();
+      // Persist to Supabase (every 5th point to avoid DB spam)
+      if (Math.floor(now) % 15 === 0) {
+        persistEquityPoint({
+          ts: now, equity: eq, available: av,
+          pending_count: pending.size, legs_count: open_legs.size,
+          session_id,
+        }).catch(() => {});
+      }
     } catch { /* ignore */ }
 
     const current_legs = new Set(open_legs.keys());
@@ -1113,6 +1133,8 @@ export async function startBot(): Promise<any> {
   bot_running = true;
   halted = false;
   last_error = null;
+  session_id = `session_${Date.now()}`;  // new session ID on each start
+  botLog("INFO", `Starting new session: ${session_id}`);
   try { await recoverOrphans(); } catch (e: any) {
     botLog("WARNING", `recover failed: ${e.message}`);
   }
@@ -1288,7 +1310,35 @@ export function getTrades(): any[] {
   return trade_history;
 }
 
+export async function getTradesAsync(): Promise<any[]> {
+  // Try loading from Supabase first (persists across restarts)
+  const sbTrades = await loadTradeHistory(200);
+  if (sbTrades.length > 0) {
+    // Convert DB rows to the format expected by the UI
+    return sbTrades.map(t => ({
+      ts: t.ts, symbol: t.symbol, side: t.side,
+      entry: parseFloat(t.entry_price), exit: parseFloat(t.exit_price),
+      qty: parseFloat(t.qty), pnl: parseFloat(t.net_pnl),
+      gross_pnl: parseFloat(t.gross_pnl), fees: parseFloat(t.fees),
+      note: t.close_reason,
+    }));
+  }
+  // Fallback to in-memory
+  return trade_history;
+}
+
 export function getEquityHistory(): any[] {
+  return equity_history;
+}
+
+export async function getEquityHistoryAsync(): Promise<any[]> {
+  const sbHistory = await loadEquityHistory(300);
+  if (sbHistory.length > 0) {
+    return sbHistory.map(h => ({
+      ts: h.ts, equity: parseFloat(h.equity), available: parseFloat(h.available),
+      pending: h.pending_count, legs: h.legs_count,
+    }));
+  }
   return equity_history;
 }
 
