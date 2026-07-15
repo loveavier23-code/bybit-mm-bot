@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -29,4 +26,46 @@ model Post {
   authorId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ============================================================================
+// Bot persistence (replaces Supabase tables)
+// ============================================================================
+
+model Trade {
+  id           Int      @id @default(autoincrement())
+  ts           Float
+  symbol       String
+  side         String
+  entryPrice   Float
+  exitPrice    Float
+  qty          Float
+  grossPnl     Float
+  fees         Float
+  netPnl       Float
+  closeReason  String
+  sessionId    String?
+
+  @@index([ts])
+}
+
+model EquityPoint {
+  id           Int      @id @default(autoincrement())
+  ts           Float
+  equity       Float
+  available    Float
+  pendingCount Int
+  legsCount    Int
+  sessionId    String?
+
+  @@index([ts])
+}
+
+model BotState {
+  id           Int      @id @default(1)
+  config       String
+  sessionStats String
+  equityPeak   Float    @default(0)
+  halted       Boolean  @default(false)
+  updatedAt    DateTime @updatedAt
 }

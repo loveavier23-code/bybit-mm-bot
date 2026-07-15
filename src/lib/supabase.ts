@@ -1,37 +1,21 @@
 /**
- * Supabase client for data persistence.
+ * Local persistence layer (replaces Supabase).
  *
- * Uses the service_role key (server-side only) to bypass RLS for bot operations.
- * The bot persists trades, equity history, and bot state here so data survives
- * serverless function cold starts and deployments.
+ * Uses Prisma + SQLite for trades, equity history, and bot state.
+ * Keeps the same export names as the previous Supabase implementation
+ * so bot-service.ts doesn't need invasive edits.
  *
- * Credentials are hardcoded for the Singapore project (gcwwubldqdeoabrfwyoy) —
- * these are demo credentials and the anon key is public by design.
- * The service_role key bypasses RLS and should be kept secret in production.
+ * `getSupabase()` is kept as a no-op (returns null) for backward
+ * compatibility with bot-service.ts call sites that haven't been
+ * fully migrated. New code should use the explicit async functions
+ * below.
  */
 
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { db } from "@/lib/db";
 
-// Singapore Supabase project (bypasses Bybit geo-block)
-const SUPABASE_URL = "https://gcwwubldqdeoabrfwyoy.supabase.co";
-// Service role key — full DB access, bypasses RLS. Hardcoded for demo.
-// In production, load from env var: process.env.SUPABASE_SERVICE_ROLE_KEY
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjd3d1YmxkcWRlb2FicmZ3eW95Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDA3OTA4OCwiZXhwIjoyMDk5NjU1MDg4fQ.UqNI7TqtFmMsUDdDm-4aC8sH6Cgt_waEFKnEvpYZ0-k";
-
-let client: SupabaseClient | null = null;
-
-export function getSupabase(): SupabaseClient | null {
-  if (!SUPABASE_URL || !SERVICE_KEY) {
-    return null;
-  }
-  if (!client) {
-    client = createClient(SUPABASE_URL, SERVICE_KEY, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-  }
-  return client;
-}
+// ============================================================================
+// Types (kept identical to the old Supabase version)
+// ============================================================================
 
 export interface TradeRow {
   ts: number;
@@ -56,84 +40,121 @@ export interface EquityRow {
   session_id?: string;
 }
 
+// ============================================================================
+// Backward-compat stub. bot-service.ts calls getSupabase() in a few places
+// to update pg_cron / halted state. We return null so those call sites
+// short-circuit gracefully — those calls have been removed from the local
+// build, but the stub keeps type checking happy.
+// ============================================================================
+
+export function getSupabase(): null {
+  return null;
+}
+
+// ============================================================================
+// Trade persistence
+// ============================================================================
+
 export async function persistTrade(trade: TradeRow): Promise<void> {
-  const sb = getSupabase();
-  if (!sb) return;
   try {
-    const { error } = await sb.from("trades").insert(trade);
-    if (error) console.error("[supabase] persistTrade error:", error.message);
+    await db.trade.create({
+      data: {
+        ts: trade.ts,
+        symbol: trade.symbol,
+        side: trade.side,
+        entryPrice: trade.entry_price,
+        exitPrice: trade.exit_price,
+        qty: trade.qty,
+        grossPnl: trade.gross_pnl,
+        fees: trade.fees,
+        netPnl: trade.net_pnl,
+        closeReason: trade.close_reason,
+        sessionId: trade.session_id ?? null,
+      },
+    });
   } catch (e: any) {
-    console.error("[supabase] persistTrade exception:", e.message);
+    console.error("[db] persistTrade error:", e.message);
   }
 }
 
 export async function persistEquityPoint(point: EquityRow): Promise<void> {
-  const sb = getSupabase();
-  if (!sb) return;
   try {
-    const { error } = await sb.from("equity_history").insert(point);
-    if (error) console.error("[supabase] persistEquityPoint error:", error.message);
+    await db.equityPoint.create({
+      data: {
+        ts: point.ts,
+        equity: point.equity,
+        available: point.available,
+        pendingCount: point.pending_count,
+        legsCount: point.legs_count,
+        sessionId: point.session_id ?? null,
+      },
+    });
   } catch (e: any) {
-    console.error("[supabase] persistEquityPoint exception:", e.message);
+    console.error("[db] persistEquityPoint error:", e.message);
   }
 }
 
 export async function loadTradeHistory(limit: number = 200): Promise<any[]> {
-  const sb = getSupabase();
-  if (!sb) return [];
   try {
-    const { data, error } = await sb
-      .from("trades")
-      .select("*")
-      .order("ts", { ascending: false })
-      .limit(limit);
-    if (error) {
-      console.error("[supabase] loadTradeHistory error:", error.message);
-      return [];
-    }
-    return data || [];
+    const rows = await db.trade.findMany({
+      orderBy: { ts: "desc" },
+      take: limit,
+    });
+    // Map Prisma column names back to the old Supabase snake_case shape.
+    return rows.map((r) => ({
+      ts: r.ts,
+      symbol: r.symbol,
+      side: r.side,
+      entry_price: r.entryPrice,
+      exit_price: r.exitPrice,
+      qty: r.qty,
+      gross_pnl: r.grossPnl,
+      fees: r.fees,
+      net_pnl: r.netPnl,
+      close_reason: r.closeReason,
+      session_id: r.sessionId,
+    }));
   } catch (e: any) {
-    console.error("[supabase] loadTradeHistory exception:", e.message);
+    console.error("[db] loadTradeHistory error:", e.message);
     return [];
   }
 }
 
 export async function loadEquityHistory(limit: number = 300): Promise<any[]> {
-  const sb = getSupabase();
-  if (!sb) return [];
   try {
-    const { data, error } = await sb
-      .from("equity_history")
-      .select("*")
-      .order("ts", { ascending: false })
-      .limit(limit);
-    if (error) {
-      console.error("[supabase] loadEquityHistory error:", error.message);
-      return [];
-    }
-    return (data || []).reverse(); // return oldest-first for charting
+    const rows = await db.equityPoint.findMany({
+      orderBy: { ts: "desc" },
+      take: limit,
+    });
+    // Reverse to oldest-first for charting.
+    return rows.reverse().map((r) => ({
+      ts: r.ts,
+      equity: r.equity,
+      available: r.available,
+      pending_count: r.pendingCount,
+      legs_count: r.legsCount,
+      session_id: r.sessionId,
+    }));
   } catch (e: any) {
-    console.error("[supabase] loadEquityHistory exception:", e.message);
+    console.error("[db] loadEquityHistory error:", e.message);
     return [];
   }
 }
 
 export async function loadBotState(): Promise<any | null> {
-  const sb = getSupabase();
-  if (!sb) return null;
   try {
-    const { data, error } = await sb
-      .from("bot_state")
-      .select("*")
-      .eq("id", 1)
-      .single();
-    if (error) {
-      console.error("[supabase] loadBotState error:", error.message);
-      return null;
-    }
-    return data;
+    const row = await db.botState.findUnique({ where: { id: 1 } });
+    if (!row) return null;
+    return {
+      id: row.id,
+      config: JSON.parse(row.config || "{}"),
+      session_stats: JSON.parse(row.sessionStats || "{}"),
+      equity_peak: row.equityPeak,
+      halted: row.halted,
+      updated_at: row.updatedAt.toISOString(),
+    };
   } catch (e: any) {
-    console.error("[supabase] loadBotState exception:", e.message);
+    console.error("[db] loadBotState error:", e.message);
     return null;
   }
 }
@@ -144,21 +165,41 @@ export async function saveBotState(state: {
   equity_peak: number;
   halted: boolean;
 }): Promise<void> {
-  const sb = getSupabase();
-  if (!sb) return;
   try {
-    const { error } = await sb
-      .from("bot_state")
-      .upsert({
+    await db.botState.upsert({
+      where: { id: 1 },
+      create: {
         id: 1,
-        config: state.config,
-        session_stats: state.session_stats,
-        equity_peak: state.equity_peak,
+        config: JSON.stringify(state.config),
+        sessionStats: JSON.stringify(state.session_stats),
+        equityPeak: state.equity_peak,
         halted: state.halted,
-        updated_at: new Date().toISOString(),
-      });
-    if (error) console.error("[supabase] saveBotState error:", error.message);
+      },
+      update: {
+        config: JSON.stringify(state.config),
+        sessionStats: JSON.stringify(state.session_stats),
+        equityPeak: state.equity_peak,
+        halted: state.halted,
+      },
+    });
   } catch (e: any) {
-    console.error("[supabase] saveBotState exception:", e.message);
+    console.error("[db] saveBotState error:", e.message);
+  }
+}
+
+// Convenience: prune old equity points so SQLite doesn't grow forever.
+// Called periodically from the worker tick.
+export async function pruneOldEquityPoints(keep: number = 5000): Promise<void> {
+  try {
+    const count = await db.equityPoint.count();
+    if (count <= keep) return;
+    const oldest = await db.equityPoint.findFirst({
+      orderBy: { ts: "desc" },
+      skip: keep - 1,
+    });
+    if (!oldest) return;
+    await db.equityPoint.deleteMany({ where: { ts: { lt: oldest.ts } } });
+  } catch (e: any) {
+    console.error("[db] pruneOldEquityPoints error:", e.message);
   }
 }
