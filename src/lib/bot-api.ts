@@ -35,6 +35,7 @@ export async function api<T = any>(
 // Types -----------------------------------------------------------------------
 
 export interface BotState {
+  error?: string;
   bot_running: boolean;
   last_error: string | null;
   equity: number;

@@ -1331,36 +1331,73 @@ export async function healthCheck(): Promise<{ reachable: boolean; proxy: boolea
   }
 }
 
+/**
+ * Build a valid state response even when Bybit is unreachable.
+ * Includes ALL fields the UI expects (positions, config, top_spreads, etc.)
+ * so the client doesn't crash with TypeError on missing fields.
+ */
+function makeErrorResponse(error: string, isRunning: boolean): any {
+  return {
+    error,
+    bot_running: isRunning,
+    last_error: error,
+    equity: 0,
+    available: 0,
+    equity_peak: 0,
+    positions: [],
+    open_orders: [],
+    pending_pairs: [],
+    open_legs: [],
+    excluded_symbols: Array.from(EXCLUDED_SYMBOLS).sort(),
+    universe: universe_cache,
+    top_spreads: [],
+    config: { ...botConfig },
+    session_stats: {
+      total_cycles: 0,
+      winning_cycles: 0,
+      losing_cycles: 0,
+      total_realized_pnl: 0,
+      total_fees_paid: 0,
+      session_start_ts: Date.now() / 1000,
+      session_duration_sec: 0,
+      win_rate: 0,
+      gross_pnl: 0,
+      avg_pnl_per_cycle: 0,
+    },
+    halted: false,
+  };
+}
+
 export async function getSnapshot(): Promise<any> {
   if (!instrumentsLoaded) {
     try { await refreshInstruments(); } catch (e: any) {
-      return { error: `init failed: ${e.message}`, bot_running };
+      return makeErrorResponse(`init failed: ${e.message}`, bot_running);
     }
   }
 
-  let equity = 0, available = 0;
-  try { [equity, available] = await getEquity(); } catch (e: any) {
-    return { error: `get_equity failed: ${e.message}`, bot_running };
+  // Parallelize the 3 core Bybit calls (equity, positions, orders) — saves ~6s
+  const [equityResult, positionsResult, ordersResult] = await Promise.allSettled([
+    getEquity(),
+    getPositions(),
+    getOpenOrders(),
+  ]);
+
+  if (equityResult.status === 'rejected') {
+    return makeErrorResponse(`get_equity failed: ${equityResult.reason?.message || equityResult.reason}`, bot_running);
   }
 
-  let positions: any[] = [];
-  try { positions = await getPositions(); } catch { /* ignore */ }
-
-  let open_orders: any[] = [];
-  try { open_orders = await getOpenOrders(); } catch { /* ignore */ }
+  const [equity, available] = equityResult.value;
+  const positions = positionsResult.status === 'fulfilled' ? positionsResult.value : [];
+  const open_orders = ordersResult.status === 'fulfilled' ? ordersResult.value : [];
 
   const excluded = Array.from(new Set([...runtime_excluded, ...EXCLUDED_SYMBOLS])).sort();
 
-  // Fetch spreads for the FULL universe (not just first 6) so the UI shows
-  // the same opportunities the bot can trade. Previously only fetched 6 symbols,
-  // which meant the bot could trade symbols #7-25 that never appeared in the UI.
-  // Parallelized with Promise.all for speed.
+  // Fetch spreads — limit to 5 symbols and parallelize (each call ~3s via proxy)
   let universe: string[] = universe_cache;
   if (universe.length === 0) {
     try { universe = await getTopUniverse(botConfig.symbol_universe_size); } catch { universe = []; }
   }
-  // Limit spread scan to 8 symbols for speed (each call goes through Supabase proxy)
-  const scanSyms = universe.slice(0, 8);
+  const scanSyms = universe.slice(0, 5);
   const quoteResults = await Promise.all(
     scanSyms.map(sym => getQuote(sym, 3).then(q => ({ sym, q })).catch(() => ({ sym, q: null })))
   );

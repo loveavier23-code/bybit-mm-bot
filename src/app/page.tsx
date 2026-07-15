@@ -100,9 +100,9 @@ export default function Home() {
       setTrades(t.trades)
       setEquityHistory(e.points)
       // Don't clobber user's unsaved config edits — only sync from server if clean.
-      // This was the bug: every 3s the poll overwrote in-progress edits.
       setConfigDraft(prev => configDirty ? prev : s.config)
-      setError(null)
+      // Show error from state response (e.g. "Bybit unreachable") but don't crash
+      setError(s.error || null)
     } catch (err: any) {
       setError(err.message || String(err))
     } finally {
