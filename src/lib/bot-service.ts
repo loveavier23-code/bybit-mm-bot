@@ -17,10 +17,14 @@ import { createHmac } from "node:crypto";
 // ============================================================================
 // CONFIG
 // ============================================================================
-// API keys can come from env vars (preferred for prod) or fall back to demo defaults
-const API_KEY = process.env.BYBIT_API_KEY || "YOUR_BYBIT_API_KEY";
-const API_SECRET = process.env.BYBIT_API_SECRET || "YOUR_BYBIT_API_SECRET";
+// API keys MUST come from env vars. Copy .env.example to .env and fill in.
+// Never commit real API keys to git.
+const API_KEY = process.env.BYBIT_API_KEY || "";
+const API_SECRET = process.env.BYBIT_API_SECRET || "";
 const BASE_URL = process.env.BYBIT_BASE_URL || "https://api-demo.bybit.com";
+if (!API_KEY || !API_SECRET) {
+  console.warn("[bot-service] WARNING: BYBIT_API_KEY / BYBIT_API_SECRET env vars not set. Bot will not function. Copy .env.example to .env and fill in your demo keys.");
+}
 const CATEGORY = "linear";
 const QUOTE_COIN = "USDT";
 const EXCLUDED_SYMBOLS = new Set(["BTCUSDT", "ETHUSDT"]);

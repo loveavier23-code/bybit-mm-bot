@@ -54,9 +54,12 @@ from pybit.unified_trading import HTTP
 # CONFIG
 # ============================================================================
 
-API_KEY = "YOUR_BYBIT_API_KEY"
-API_SECRET = "YOUR_BYBIT_API_SECRET"
-DEMO_URL = "https://api-demo.bybit.com"
+API_KEY = os.environ.get("BYBIT_API_KEY", "")
+API_SECRET = os.environ.get("BYBIT_API_SECRET", "")
+DEMO_URL = os.environ.get("BYBIT_BASE_URL", "https://api-demo.bybit.com")
+if not API_KEY or not API_SECRET:
+    print("ERROR: Set BYBIT_API_KEY and BYBIT_API_SECRET env vars. Copy .env.example to .env and fill in your demo keys.")
+    sys.exit(1)
 
 # --- Strategy parameters ---
 EXCLUDED_SYMBOLS = {"BTCUSDT", "ETHUSDT"}          # hard exclusion per user spec

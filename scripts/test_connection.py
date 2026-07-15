@@ -2,11 +2,17 @@
 Quick connectivity + permissions sanity check against Bybit DEMO account.
 Endpoint: https://api-demo.bybit.com
 """
+import os
+import sys
 from pybit.unified_trading import HTTP
 
-API_KEY = "YOUR_BYBIT_API_KEY"
-API_SECRET = "YOUR_BYBIT_API_SECRET"
-DEMO_URL = "https://api-demo.bybit.com"
+API_KEY = os.environ.get("BYBIT_API_KEY", "")
+API_SECRET = os.environ.get("BYBIT_API_SECRET", "")
+DEMO_URL = os.environ.get("BYBIT_BASE_URL", "https://api-demo.bybit.com")
+if not API_KEY or not API_SECRET:
+    print("ERROR: Set BYBIT_API_KEY and BYBIT_API_SECRET env vars.")
+    print("Copy .env.example to .env and fill in your demo keys.")
+    sys.exit(1)
 
 def main():
     session = HTTP(
