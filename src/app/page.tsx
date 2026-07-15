@@ -171,7 +171,7 @@ export default function Home() {
   const equityPeak = state?.equity_peak ?? 0
   const pnl = equity - equityPeak
   const pnlPct = equityPeak > 0 ? (pnl / equityPeak) * 100 : 0
-  const unrealisedPnl = state?.positions.reduce((s, p) => s + p.unrealised_pnl, 0) ?? 0
+  const unrealisedPnl = (state?.positions ?? []).reduce((s, p) => s + p.unrealised_pnl, 0)
 
   // Chart data with formatted time
   const chartData = equityHistory.map(p => ({
@@ -459,7 +459,7 @@ export default function Home() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        state?.positions.map((p, i) => (
+                        (state?.positions ?? []).map((p, i) => (
                           <TableRow key={`${p.symbol}-${i}`}>
                             <TableCell className="font-medium">{p.symbol}</TableCell>
                             <TableCell>
@@ -546,7 +546,7 @@ export default function Home() {
                             </TableCell>
                           </TableRow>
                         ) : (
-                          state?.pending_pairs.map((p, i) => (
+                          (state?.pending_pairs ?? []).map((p, i) => (
                             <TableRow key={`${p.symbol}-${i}`}>
                               <TableCell className="font-medium">{p.symbol}</TableCell>
                               <TableCell className="text-right font-mono text-emerald-600">{p.buy_price}</TableCell>
@@ -587,7 +587,7 @@ export default function Home() {
                             </TableCell>
                           </TableRow>
                         ) : (
-                          state?.open_legs.map((l, i) => (
+                          (state?.open_legs ?? []).map((l, i) => (
                             <TableRow key={`${l.symbol}-${i}`}>
                               <TableCell className="font-medium">{l.symbol}</TableCell>
                               <TableCell>
@@ -633,7 +633,7 @@ export default function Home() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        state?.open_orders.map((o, i) => (
+                        (state?.open_orders ?? []).map((o, i) => (
                           <TableRow key={i}>
                             <TableCell className="font-medium">{o.symbol}</TableCell>
                             <TableCell>
@@ -689,7 +689,7 @@ export default function Home() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      state?.top_spreads.map((s, i) => {
+                      (state?.top_spreads ?? []).map((s, i) => {
                         const minBps = state?.config.min_spread_bps ?? 8
                         const qualifies = s.spread_bps >= minBps
                         return (
@@ -1019,7 +1019,7 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {state?.excluded_symbols.map((s) => (
+                  {(state?.excluded_symbols ?? []).map((s) => (
                     <Badge key={s} variant="secondary" className="font-mono text-xs">{s}</Badge>
                   ))}
                 </div>
