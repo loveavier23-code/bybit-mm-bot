@@ -662,10 +662,22 @@ export default function Home() {
           <TabsContent value="spreads">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Top Spread Opportunities</CardTitle>
+                <CardTitle className="text-base">
+                  Spread Opportunities
+                  {(() => {
+                    const spreads = state?.top_spreads ?? []
+                    const minBps = state?.config.min_spread_bps ?? 8
+                    const tradable = spreads.filter(s => s.spread_bps >= minBps).length
+                    return (
+                      <Badge variant="secondary" className="ml-2 text-xs">
+                        {tradable} tradable / {spreads.length} scanned
+                      </Badge>
+                    )
+                  })()}
+                </CardTitle>
                 <CardDescription>
-                  Live bid/ask spread scan across the top-{state?.config.symbol_universe_size ?? 25} tradable altcoin perps.
-                  Bot places orders on any symbol with spread ≥ {state?.config.min_spread_bps ?? 8} bps.
+                  Live bid/ask spread scan across all {state?.config.symbol_universe_size ?? 25} symbols in the universe.
+                  Bot places orders on any symbol with spread ≥ {state?.config.min_spread_bps ?? 8} bps (highlighted below).
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0">

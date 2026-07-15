@@ -1202,14 +1202,16 @@ export async function getSnapshot(): Promise<any> {
 
   const excluded = Array.from(new Set([...runtime_excluded, ...EXCLUDED_SYMBOLS])).sort();
 
-  // Fetch top spreads (limit to 6 for speed) — parallelized
+  // Fetch spreads for the FULL universe (not just first 6) so the UI shows
+  // the same opportunities the bot can trade. Previously only fetched 6 symbols,
+  // which meant the bot could trade symbols #7-25 that never appeared in the UI.
+  // Parallelized with Promise.all for speed.
   let universe: string[] = universe_cache;
   if (universe.length === 0) {
     try { universe = await getTopUniverse(botConfig.symbol_universe_size); } catch { universe = []; }
   }
-  const spreadSyms = universe.slice(0, 6);
   const quoteResults = await Promise.all(
-    spreadSyms.map(sym => getQuote(sym, 3).then(q => ({ sym, q })).catch(() => ({ sym, q: null })))
+    universe.map(sym => getQuote(sym, 3).then(q => ({ sym, q })).catch(() => ({ sym, q: null })))
   );
   const spreads: any[] = [];
   for (const { sym, q } of quoteResults) {
@@ -1253,7 +1255,9 @@ export async function getSnapshot(): Promise<any> {
     })),
     excluded_symbols: excluded,
     universe,
-    top_spreads: spreads.sort((a, b) => b.spread_bps - a.spread_bps).slice(0, 10),
+    // Sort by spread descending (highest first), show all — UI will render with scroll.
+    // Previously sliced to 10, which could hide tradable opportunities.
+    top_spreads: spreads.sort((a, b) => b.spread_bps - a.spread_bps),
     config: { ...botConfig },
     session_stats: {
       ...session_stats,
