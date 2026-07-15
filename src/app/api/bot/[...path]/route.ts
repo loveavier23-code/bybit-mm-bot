@@ -31,25 +31,24 @@ export async function GET(
   try {
     switch (route) {
       case "health": {
-        // Actually verify Bybit connectivity by fetching server time
+        // Use the bot-service's bybitGet which routes through Supabase proxy
         try {
           const t0 = Date.now();
-          const r: any = await fetch("https://api-demo.bybit.com/v5/market/time", {
-            signal: AbortSignal.timeout(5000),
-          }).then(r => r.json());
+          const r: any = await bot.healthCheck();
           const latency = Date.now() - t0;
           return NextResponse.json({
-            status: "ok",
-            bot_running: false, // singleton not exposed here; /state has it
-            last_error: null,
-            bybit_reachable: r?.retCode === 0,
-            bybit_latency_ms: latency,
-          });
+            status: r.reachable ? "ok" : "degraded",
+            bot_running: false,
+            last_error: r.error || null,
+            bybit_reachable: r.reachable,
+            bybit_latency_ms: r.reachable ? latency : null,
+            proxy: r.proxy || false,
+          }, { status: r.reachable ? 200 : 503 });
         } catch (e: any) {
           return NextResponse.json({
             status: "degraded",
             bot_running: false,
-            last_error: `bybit unreachable: ${e.message}`,
+            last_error: e.message,
             bybit_reachable: false,
             bybit_latency_ms: null,
           }, { status: 503 });
@@ -101,6 +100,18 @@ export async function POST(
       }
       case "stop": {
         const r = await bot.stopBot();
+        return NextResponse.json(r);
+      }
+      case "tick": {
+        // Cron-triggered single cycle. Runs one tick of the bot.
+        // If bot isn't running, start it first (stateless-friendly).
+        // Auth: requires CRON_SECRET header to prevent abuse.
+        const cronSecret = req.headers.get("x-cron-secret");
+        const expectedSecret = process.env.CRON_SECRET;
+        if (expectedSecret && cronSecret !== expectedSecret) {
+          return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+        }
+        const r = await bot.cronTick();
         return NextResponse.json(r);
       }
       case "cleanup": {

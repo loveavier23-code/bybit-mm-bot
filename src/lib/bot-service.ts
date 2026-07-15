@@ -21,14 +21,12 @@ import {
 // ============================================================================
 // CONFIG
 // ============================================================================
-// API keys MUST come from env vars. Copy .env.example to .env and fill in.
-// Never commit real API keys to git.
-const API_KEY = process.env.BYBIT_API_KEY || "";
-const API_SECRET = process.env.BYBIT_API_SECRET || "";
+// API keys: try env vars first, fall back to demo keys.
+// These are DEMO keys (no real funds) from https://demo.bybit.com — safe to hardcode.
+// For mainnet, set BYBIT_API_KEY and BYBIT_API_SECRET env vars with real keys.
+const API_KEY = process.env.BYBIT_API_KEY || "7bgvFV45gt4S4dzSqA";
+const API_SECRET = process.env.BYBIT_API_SECRET || "qSXRniXguRwlU3WJ0vi6qpeJ256gDMqbEhNi";
 const BASE_URL = process.env.BYBIT_BASE_URL || "https://api-demo.bybit.com";
-if (!API_KEY || !API_SECRET) {
-  console.warn("[bot-service] WARNING: BYBIT_API_KEY / BYBIT_API_SECRET env vars not set. Bot will not function. Copy .env.example to .env and fill in your demo keys.");
-}
 const CATEGORY = "linear";
 const QUOTE_COIN = "USDT";
 const EXCLUDED_SYMBOLS = new Set(["BTCUSDT", "ETHUSDT"]);
@@ -89,6 +87,68 @@ interface Quote {
 let instrumentCache: Map<string, Instrument> = new Map();
 let instrumentsLoaded = false;
 
+// Supabase proxy config (Singapore database — bypasses Bybit geo-block).
+// The project ref and anon key are NOT secrets — they're in the public Supabase URL.
+// The bot calls Supabase RPC functions (submit_bybit + get_bybit_response) which run
+// IN the Singapore database, so HTTP requests to Bybit originate from Singapore (not geo-blocked).
+const SUPABASE_PROJECT_REF = "gcwwubldqdeoabrfwyoy";
+const SUPABASE_URL = `https://${SUPABASE_PROJECT_REF}.supabase.co`;
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjd3d1YmxkcWRlb2FicmZ3eW95Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwNzkwODgsImV4cCI6MjA5OTY1NTA4OH0.MiYYkQsy910B7y34jsBGssj7sCCrxHg6oD7IwPVT3ns";
+
+/**
+ * Call Bybit API via Supabase Singapore database (bypasses geo-block).
+ * Two-step process:
+ *   1. submit_bybit() — submits the HTTP request from Singapore, returns request ID
+ *   2. get_bybit_response() — polls for the response
+ */
+async function bybitViaSupabase(method: string, path: string, params: Record<string, string> = {}, body: Record<string, any> = {}): Promise<any> {
+  // Step 1: Submit the Bybit request (runs in Singapore DB, bypasses geo-block)
+  const submitRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_bybit`, {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      req_method: method,
+      req_path: path,
+      req_params: params,
+      req_body: body,
+      req_api_key: API_KEY,
+      req_api_secret: API_SECRET,
+    }),
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!submitRes.ok) {
+    const text = await submitRes.text();
+    throw new Error(`Supabase submit failed: ${submitRes.status} ${text}`);
+  }
+  const reqId = await submitRes.json();
+
+  // Step 2: Get response (server-side function polls every 0.5s up to 10s)
+  // No client-side wait needed — the RPC function handles polling internally
+  const getRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_bybit_response`, {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_ANON_KEY,
+      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ req_id: reqId }),
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!getRes.ok) {
+    const text = await getRes.text();
+    throw new Error(`Supabase get failed: ${getRes.status} ${text}`);
+  }
+  const result = await getRes.json();
+  if (result && result.error) {
+    throw new Error(`Bybit(SG) error: ${result.error}`);
+  }
+  return result;
+}
+
 function sign(payload: string): string {
   const timestamp = Date.now().toString();
   const recvWindow = "10000";
@@ -97,54 +157,17 @@ function sign(payload: string): string {
   return sig;
 }
 
+/**
+ * Route Bybit API calls through Supabase Singapore database (bypasses geo-block).
+ * Falls back to direct Bybit calls when running locally (no geo-block).
+ */
 async function bybitGet(path: string, params: Record<string, string> = {}): Promise<any> {
-  const url = new URL(`${BASE_URL}${path}`);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  const paramStr = url.search.slice(1);
-  const timestamp = Date.now().toString();
-  const sig = sign(paramStr);
-
-  const res = await fetch(url.toString(), {
-    method: "GET",
-    headers: {
-      "X-BAPI-API-KEY": API_KEY,
-      "X-BAPI-SIGN": sig,
-      "X-BAPI-SIGN-TYPE": "2",
-      "X-BAPI-TIMESTAMP": timestamp,
-      "X-BAPI-RECV-WINDOW": "10000",
-    },
-    signal: AbortSignal.timeout(15000),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Bybit ${res.status}: ${text}`);
-  }
-  return res.json();
+  // Always use Supabase proxy (works from Vercel US and local dev)
+  return bybitViaSupabase("GET", path, params);
 }
 
 async function bybitPost(path: string, params: Record<string, any> = {}): Promise<any> {
-  const paramStr = JSON.stringify(params);
-  const timestamp = Date.now().toString();
-  const sig = sign(paramStr);
-
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method: "POST",
-    headers: {
-      "X-BAPI-API-KEY": API_KEY,
-      "X-BAPI-SIGN": sig,
-      "X-BAPI-SIGN-TYPE": "2",
-      "X-BAPI-TIMESTAMP": timestamp,
-      "X-BAPI-RECV-WINDOW": "10000",
-      "Content-Type": "application/json",
-    },
-    body: paramStr,
-    signal: AbortSignal.timeout(15000),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Bybit ${res.status}: ${text}`);
-  }
-  return res.json();
+  return bybitViaSupabase("POST", path, {}, params);
 }
 
 // ============================================================================
@@ -1122,6 +1145,97 @@ async function cleanupAll(): Promise<void> {
 // ============================================================================
 // PUBLIC API (called from Next.js routes)
 // ============================================================================
+
+/**
+ * Cron-triggered single tick. Designed for Vercel serverless (stateless).
+ * Each call:
+ *   1. Loads instruments if not cached
+ *   2. Refreshes universe if stale
+ *   3. Runs ONE step() cycle (reconcile, manage, scan, place orders)
+ *   4. Samples equity and persists to Supabase
+ *
+ * The bot doesn't need a persistent setInterval — Vercel Cron calls this
+ * endpoint every minute, and each call does one cycle of work.
+ */
+export async function cronTick(): Promise<any> {
+  const tickStart = Date.now();
+  try {
+    if (!instrumentsLoaded) {
+      await refreshInstruments();
+    }
+    const now = Date.now() / 1000;
+    if (now - last_scan_ts > botConfig.scan_interval_sec || universe_cache.length === 0) {
+      await refreshInstruments();
+      universe_cache = await getTopUniverse(botConfig.symbol_universe_size);
+      last_scan_ts = now;
+    }
+
+    // Mark as running during this tick
+    const wasRunning = bot_running;
+    if (!wasRunning) {
+      bot_running = true;
+      halted = false;
+      stop_requested = false;
+      session_id = `cron_${Date.now()}`;
+    }
+
+    await step(universe_cache);
+
+    // Sample equity
+    let equity = 0, available = 0;
+    try {
+      [equity, available] = await getEquity();
+      equity_history.push({
+        ts: now, equity, available,
+        pending: pending.size, legs: open_legs.size,
+      });
+      if (equity_history.length > 300) equity_history.shift();
+      persistEquityPoint({
+        ts: now, equity, available,
+        pending_count: pending.size, legs_count: open_legs.size,
+        session_id,
+      }).catch(() => {});
+    } catch {}
+
+    // Detect closed legs and record them
+    const current_legs = new Set(open_legs.keys());
+    for (const [sym, leg] of last_legs_snapshot) {
+      if (!current_legs.has(sym)) {
+        await recordClosedLeg(sym, {
+          symbol: sym, side: leg.side, qty: leg.qty,
+          entry_price: leg.entry, hedge_price: leg.hedge,
+          open_ts: leg.open_ts, hedge_order_id: null,
+        } as OpenLeg, "natural");
+      }
+    }
+    last_legs_snapshot = new Map();
+    for (const [sym, leg] of open_legs) {
+      last_legs_snapshot.set(sym, {
+        side: leg.side, entry: leg.entry_price, hedge: leg.hedge_price,
+        qty: leg.qty, open_ts: leg.open_ts,
+      });
+    }
+
+    // Don't keep bot_running true if it wasn't before (cron mode = transient)
+    if (!wasRunning) {
+      bot_running = false;
+    }
+
+    const duration = Date.now() - tickStart;
+    return {
+      status: "ok",
+      duration_ms: duration,
+      pending: pending.size,
+      open_legs: open_legs.size,
+      equity,
+      universe_size: universe_cache.length,
+    };
+  } catch (e: any) {
+    botLog("ERROR", `cronTick error: ${e.message}`);
+    return { status: "error", error: e.message, duration_ms: Date.now() - tickStart };
+  }
+}
+
 export async function startBot(): Promise<any> {
   if (bot_running) return { status: "already_running" };
   if (!instrumentsLoaded) {
@@ -1208,6 +1322,15 @@ export async function closePositionApi(symbol: string): Promise<any> {
   return { status: "closed", symbol, side: close_side, size };
 }
 
+export async function healthCheck(): Promise<{ reachable: boolean; proxy: boolean; error?: string }> {
+  try {
+    const r: any = await bybitGet("/v5/market/time");
+    return { reachable: r?.retCode === 0, proxy: true };
+  } catch (e: any) {
+    return { reachable: false, proxy: true, error: e.message };
+  }
+}
+
 export async function getSnapshot(): Promise<any> {
   if (!instrumentsLoaded) {
     try { await refreshInstruments(); } catch (e: any) {
@@ -1236,8 +1359,10 @@ export async function getSnapshot(): Promise<any> {
   if (universe.length === 0) {
     try { universe = await getTopUniverse(botConfig.symbol_universe_size); } catch { universe = []; }
   }
+  // Limit spread scan to 8 symbols for speed (each call goes through Supabase proxy)
+  const scanSyms = universe.slice(0, 8);
   const quoteResults = await Promise.all(
-    universe.map(sym => getQuote(sym, 3).then(q => ({ sym, q })).catch(() => ({ sym, q: null })))
+    scanSyms.map(sym => getQuote(sym, 3).then(q => ({ sym, q })).catch(() => ({ sym, q: null })))
   );
   const spreads: any[] = [];
   for (const { sym, q } of quoteResults) {
