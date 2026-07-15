@@ -1159,6 +1159,42 @@ async function cleanupAll(): Promise<void> {
  */
 export async function cronTick(): Promise<any> {
   const tickStart = Date.now();
+
+  // Check Supabase for persisted stopped/halted state (survives cold starts).
+  // Vercel serverless is stateless — in-memory `stop_requested` resets on every
+  // cold start, so we must check the database to know if the user clicked Stop.
+  try {
+    const sb = (await import("@/lib/supabase")).getSupabase();
+    if (sb) {
+      const { data } = await sb.from("bot_state").select("halted").eq("id", 1).single();
+      if (data?.halted) {
+        stop_requested = true;
+        halted = true;
+      }
+    }
+  } catch {}
+
+  // Respect stop_requested and halted flags.
+  // If the user clicked Stop (persisted to Supabase), cron ticks are no-ops.
+  if (stop_requested) {
+    return {
+      status: "stopped",
+      duration_ms: Date.now() - tickStart,
+      message: "Bot is stopped — cron tick skipped. Click Start to resume.",
+      pending: pending.size,
+      open_legs: open_legs.size,
+    };
+  }
+  if (halted) {
+    return {
+      status: "halted",
+      duration_ms: Date.now() - tickStart,
+      message: "Bot is halted (drawdown) — cron tick skipped",
+      pending: pending.size,
+      open_legs: open_legs.size,
+    };
+  }
+
   try {
     if (!instrumentsLoaded) {
       await refreshInstruments();
@@ -1170,13 +1206,11 @@ export async function cronTick(): Promise<any> {
       last_scan_ts = now;
     }
 
-    // Mark as running during this tick
+    // Mark as running during this tick (for UI status)
     const wasRunning = bot_running;
     if (!wasRunning) {
       bot_running = true;
-      halted = false;
-      stop_requested = false;
-      session_id = `cron_${Date.now()}`;
+      // Don't reset stop_requested here — that's only cleared by explicit startBot()
     }
 
     await step(universe_cache);
@@ -1247,23 +1281,39 @@ export async function startBot(): Promise<any> {
   bot_running = true;
   halted = false;
   last_error = null;
-  session_id = `session_${Date.now()}`;  // new session ID on each start
+  session_id = `session_${Date.now()}`;
   botLog("INFO", `Starting new session: ${session_id}`);
+  // Persist "running" state to Supabase (survives cold starts)
+  saveBotState({
+    config: { ...botConfig },
+    session_stats: { ...session_stats },
+    equity_peak,
+    halted: false,
+  }).catch(() => {});
+  // Also mark as not-stopped in the bot_state table
+  try {
+    const sb = (await import("@/lib/supabase")).getSupabase();
+    if (sb) {
+      await sb.from("bot_state").update({
+        halted: false,
+        updated_at: new Date().toISOString(),
+      }).eq("id", 1);
+    }
+  } catch {}
   try { await recoverOrphans(); } catch (e: any) {
     botLog("WARNING", `recover failed: ${e.message}`);
   }
-  // Start worker using setInterval (survives because we're in the Next.js process)
   if (worker_interval) clearInterval(worker_interval);
   const intervalMs = Math.max(1000, botConfig.poll_interval_sec * 1000);
   worker_interval = setInterval(() => {
     workerTick().catch(e => botLog("ERROR", `interval error: ${e.message}`));
   }, intervalMs);
-  botLog("INFO", "Bot started");
+  botLog("INFO", "Bot started — cron ticks will now place trades");
   return { status: "started" };
 }
 
 export async function stopBot(): Promise<any> {
-  if (!bot_running) return { status: "already_stopped" };
+  // Always set stop_requested, even if bot_running is false (could be between cron ticks)
   stop_requested = true;
   bot_running = false;
   if (worker_interval) {
@@ -1272,13 +1322,23 @@ export async function stopBot(): Promise<any> {
   }
   // Cancel any pending MM pairs so we don't leave orphan post-only orders on the book
   const cancelledCount = pending.size;
-  botLog("INFO", `Stopping bot — cancelling ${cancelledCount} pending pair(s)`);
+  botLog("INFO", `Stopping bot — cancelling ${cancelledCount} pending pair(s) and halting cron ticks`);
   for (const [sym, pp] of Array.from(pending.entries())) {
     if (pp.buy_order_id) await cancelOrder(sym, pp.buy_order_id);
     if (pp.sell_order_id) await cancelOrder(sym, pp.sell_order_id);
     pending.delete(sym);
   }
-  botLog("INFO", "Bot stopped");
+  // Persist stopped state to Supabase so cron ticks respect it across cold starts
+  try {
+    const sb = (await import("@/lib/supabase")).getSupabase();
+    if (sb) {
+      await sb.from("bot_state").update({
+        halted: true,  // reuse halted flag to mean "stopped by user"
+        updated_at: new Date().toISOString(),
+      }).eq("id", 1);
+    }
+  } catch {}
+  botLog("INFO", "Bot stopped — cron ticks will be no-ops until Start is clicked");
   return { status: "stopped", cancelled_pairs: cancelledCount };
 }
 

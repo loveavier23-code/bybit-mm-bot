@@ -5,17 +5,19 @@
  * The bot persists trades, equity history, and bot state here so data survives
  * serverless function cold starts and deployments.
  *
- * Tables:
- *   - trades: completed MM cycles with PnL/fees
- *   - equity_history: sampled equity curve
- *   - bot_state: config + session stats
- *   - open_legs: currently unhedged positions (crash recovery)
+ * Credentials are hardcoded for the Singapore project (gcwwubldqdeoabrfwyoy) —
+ * these are demo credentials and the anon key is public by design.
+ * The service_role key bypasses RLS and should be kept secret in production.
  */
 
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+// Singapore Supabase project (bypasses Bybit geo-block)
+const SUPABASE_URL = "https://gcwwubldqdeoabrfwyoy.supabase.co";
+// Service role key — full DB access, bypasses RLS. Hardcoded for demo.
+// In production, load from env var: process.env.SUPABASE_SERVICE_ROLE_KEY
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjd3d1YmxkcWRlb2FicmZ3eW95Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NDA3OTA4OCwiZXhwIjoyMDk5NjU1MDg4fQ.UqNI7TqtFmMsUDdDm-4aC8sH6Cgt_waEFKnEvpYZ0-k";
 
 let client: SupabaseClient | null = null;
 
