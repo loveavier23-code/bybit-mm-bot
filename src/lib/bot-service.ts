@@ -1263,14 +1263,7 @@ export async function startBot(): Promise<any> {
   last_error = null;
   session_id = `session_${Date.now()}`;
   botLog("INFO", `Starting new session: ${session_id}`);
-  // Persist "running" state to Supabase (survives cold starts)
-  saveBotState({
-    config: { ...botConfig },
-    session_stats: { ...session_stats },
-    equity_peak,
-    halted: false,
-  }).catch(() => {});
-  // Also mark as not-stopped in the bot_state table
+  // Persist "running" state to Supabase and resume cron job
   try {
     const sb = (await import("@/lib/supabase")).getSupabase();
     if (sb) {
@@ -1278,6 +1271,9 @@ export async function startBot(): Promise<any> {
         halted: false,
         updated_at: new Date().toISOString(),
       }).eq("id", 1);
+      // Resume the pg_cron job so ticks start firing again
+      await sb.rpc("resume_cron");
+      botLog("INFO", "pg_cron job resumed — ticks will fire every minute");
     }
   } catch {}
   try { await recoverOrphans(); } catch (e: any) {
@@ -1300,26 +1296,49 @@ export async function stopBot(): Promise<any> {
     clearInterval(worker_interval);
     worker_interval = null;
   }
-  // Cancel any pending MM pairs so we don't leave orphan post-only orders on the book
-  const cancelledCount = pending.size;
-  botLog("INFO", `Stopping bot — cancelling ${cancelledCount} pending pair(s) and halting cron ticks`);
+
+  // Cancel in-memory pending pairs (orders placed during THIS function instance)
+  let cancelledInMemory = pending.size;
+  botLog("INFO", `Stopping bot — cancelling ${cancelledInMemory} in-memory pending pair(s)`);
   for (const [sym, pp] of Array.from(pending.entries())) {
     if (pp.buy_order_id) await cancelOrder(sym, pp.buy_order_id);
     if (pp.sell_order_id) await cancelOrder(sym, pp.sell_order_id);
     pending.delete(sym);
   }
+  pending.clear();
+  open_legs.clear();
+
+  // CRITICAL: Cancel ALL open orders on Bybit using cancel-all API.
+  // Vercel is stateless — the in-memory `pending` Map is empty on every cold
+  // start, so there may be orphan orders on Bybit from previous cron ticks
+  // that aren't tracked locally. Use cancel-all (single API call) instead of
+  // looping (slow + unreliable through the Supabase proxy).
+  let cancelledBybit = 0;
+  try {
+    const allOrders = await getOpenOrders();
+    cancelledBybit = allOrders.length;
+    botLog("INFO", `Cancelling ALL ${cancelledBybit} open orders on Bybit via cancel-all`);
+    await cancelAllOrders();
+  } catch (e: any) {
+    botLog("WARNING", `Failed to cancel all Bybit orders: ${e.message}`);
+  }
+
   // Persist stopped state to Supabase so cron ticks respect it across cold starts
   try {
     const sb = (await import("@/lib/supabase")).getSupabase();
     if (sb) {
       await sb.from("bot_state").update({
-        halted: true,  // reuse halted flag to mean "stopped by user"
+        halted: true,
         updated_at: new Date().toISOString(),
       }).eq("id", 1);
+      // Pause the pg_cron job so it stops triggering /api/bot/tick entirely.
+      // This prevents any chance of new orders being placed while stopped.
+      await sb.rpc("pause_cron");
+      botLog("INFO", "pg_cron job paused — no more tick triggers until Start");
     }
   } catch {}
-  botLog("INFO", "Bot stopped — cron ticks will be no-ops until Start is clicked");
-  return { status: "stopped", cancelled_pairs: cancelledCount };
+  botLog("INFO", `Bot stopped — cancelled ${cancelledInMemory} in-memory + ${cancelledBybit} Bybit orders. Cron ticks halted.`);
+  return { status: "stopped", cancelled_in_memory: cancelledInMemory, cancelled_bybit: cancelledBybit };
 }
 
 export async function cleanupBot(): Promise<any> {
